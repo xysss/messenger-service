@@ -4,7 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.*
 import android.util.Log
-import model.Person
+import com.example.model.Person
 import java.lang.ref.WeakReference
 
 /**
@@ -38,10 +38,16 @@ class MessengerService : Service() {
         override fun handleMessage(msg: Message) {
             super.handleMessage(msg)
             wrActivity.get()?.run {
+
+                val acceptBundle = msg.data as Bundle
+
                 when (msg.what) {
                     WHAT1 -> {
-                        val person = msg.data.getParcelable("person") as Person?
-                        Log.e("来自客户端的",person.toString())
+                        //val person = msg.data.getParcelable("person") as Person?
+                        //val user = acceptBundle.get("person") as Person
+                        val userS=msg.data?.getSerializable("person")
+                        //val person : Person? = acceptBundle.getParcelable("person")
+                        Log.e("来自客户端的",userS.toString())
 
 //                        val user = msg.data.get("user")
 //                        Log.e("来自客户端的",user.toString())
