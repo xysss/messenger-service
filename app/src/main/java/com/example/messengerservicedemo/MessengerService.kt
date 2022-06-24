@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.*
 import android.util.Log
 import com.example.model.Person
+import com.example.model.UserS
 import java.lang.ref.WeakReference
 
 /**
@@ -14,6 +15,8 @@ import java.lang.ref.WeakReference
  */
 //这里服务端Service是运行在单独的进程中的 android:process=":other"
 class MessengerService : Service() {
+
+    private lateinit var clientMsg: Message
 
     companion object {
         const val WHAT1 = 1
@@ -33,21 +36,18 @@ class MessengerService : Service() {
         return mMessenger.binder
     }
 
-
     private class MyHandler(val wrActivity: WeakReference<MessengerService>) : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             super.handleMessage(msg)
             wrActivity.get()?.run {
-
-                val acceptBundle = msg.data as Bundle
-
+                clientMsg=msg
                 when (msg.what) {
                     WHAT1 -> {
                         //val person = msg.data.getParcelable("person") as Person?
                         //val user = acceptBundle.get("person") as Person
                         val userS=msg.data?.getSerializable("person")
                         //val person : Person? = acceptBundle.getParcelable("person")
-                        Log.e("来自客户端的",userS.toString())
+                        Log.e("来自client的",userS.toString())
 
 //                        val user = msg.data.get("user")
 //                        Log.e("来自客户端的",user.toString())
@@ -56,9 +56,11 @@ class MessengerService : Service() {
 //                        Log.e("来自客户端的",date.toString())
 
                         //客户端的Messenger就是放在Message的replyTo中的
-                        replyToClient(msg, "I have received your message and will reply to you later")
+                        replyToClient(clientMsg)
                     }
                     WHAT2 ->{
+
+                        replyToClient(clientMsg)
 
                     }
                     else -> super.handleMessage(msg)
@@ -67,11 +69,13 @@ class MessengerService : Service() {
         }
     }
 
-    private fun replyToClient(msg: Message, replyText: String) {
+    private fun replyToClient(msg: Message) {
         val clientMessenger = msg.replyTo
         val replyMessage = Message.obtain(null, WHAT1)
+        val userS = UserS("小明", 25)
         replyMessage.data = Bundle().apply {
-            putString("reply", replyText)
+            putSerializable("person", userS)
+            //putString("reply", replyText)
         }
         try {
             clientMessenger?.send(replyMessage)
