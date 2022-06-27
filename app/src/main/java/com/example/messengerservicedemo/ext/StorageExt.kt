@@ -24,6 +24,7 @@ import java.util.concurrent.LinkedBlockingQueue
 val job= Job()
 val scope = CoroutineScope(job)
 var isRecOK=true
+const val logFlag="xysLog"
 
 const val recordFileName="recordFileName"
 const val alarmFileName="alarmFileName"

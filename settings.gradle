@@ -1,13 +1,3 @@
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        maven { url 'https://maven.aliyun.com/repository/public' }
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/jcenter' }
-        google()
-        mavenCentral()
-        maven { url 'https://www.jitpack.io' }
-    }
-}
+
 rootProject.name = "messengerServiceDemo"
 include ':app'

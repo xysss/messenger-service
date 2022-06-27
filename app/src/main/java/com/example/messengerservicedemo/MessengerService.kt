@@ -1,11 +1,22 @@
 package com.example.messengerservicedemo
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Intent
 import android.os.*
 import android.util.Log
+import com.blankj.utilcode.util.ToastUtils
+import com.example.messengerservicedemo.ext.job
+import com.example.messengerservicedemo.ext.logFlag
+import com.example.messengerservicedemo.ext.scope
+import com.example.messengerservicedemo.service.ForegroundNF
 import com.example.model.Person
 import com.example.model.UserS
+import com.tbruyelle.rxpermissions2.RxPermissions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import me.hgj.mvvmhelper.ext.logE
 import java.lang.ref.WeakReference
 
 /**
@@ -13,10 +24,12 @@ import java.lang.ref.WeakReference
  * 时间 : 2022-06-06 10:50
  * 描述 : 描述
  */
-//这里服务端Service是运行在单独的进程中的 android:process=":other"
 class MessengerService : Service() {
 
     private lateinit var clientMsg: Message
+    private lateinit var mForegroundNF: ForegroundNF
+    private val mHandler = MyHandler(WeakReference(this))
+    private lateinit var mMessenger: Messenger
 
     companion object {
         const val WHAT1 = 1
@@ -24,9 +37,33 @@ class MessengerService : Service() {
         const val WHAT3 = 3
     }
 
-    private val mHandler = MyHandler(WeakReference(this))
 
-    private lateinit var mMessenger: Messenger
+    override fun onCreate() {
+        super.onCreate()
+        mForegroundNF = ForegroundNF(this)
+        mForegroundNF.startForegroundNotification()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (null == intent) {
+            //服务被系统kill掉之后重启进来的
+            return START_NOT_STICKY
+        }
+        mForegroundNF.startForegroundNotification()
+
+        scope.launch(Dispatchers.IO) {
+            "服务已经启动".logE(logFlag)
+
+
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onDestroy() {
+        mForegroundNF.stopForegroundNotification()
+        job.cancel()
+        super.onDestroy()
+    }
 
     override fun onBind(intent: Intent): IBinder {
         Log.e("TAG", "onBind~")
@@ -61,7 +98,6 @@ class MessengerService : Service() {
                     WHAT2 ->{
 
                         replyToClient(clientMsg)
-
                     }
                     else -> super.handleMessage(msg)
                 }
@@ -83,8 +119,4 @@ class MessengerService : Service() {
             e.printStackTrace()
         }
     }
-
-
-
-
 }

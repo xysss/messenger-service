@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">messengerServiceDemo</string>
+    <string name="app_name">ComHub</string>
+    <string name="notification_content">This is content title</string>
+    <string name="notification_sub_content">This is content text</string>
 </resources>
