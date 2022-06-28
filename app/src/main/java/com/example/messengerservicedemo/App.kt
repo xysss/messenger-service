@@ -2,9 +2,11 @@ package com.example.messengerservicedemo
 
 import android.app.Application
 import android.content.Intent
+import com.amap.api.location.AMapLocationClient
 import com.effective.android.anchors.AnchorsManager
 import com.effective.android.anchors.Project
 import me.hgj.mvvmhelper.base.MvvmHelper
+import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.currentProcessName
 
 /**
@@ -33,11 +35,16 @@ class App: Application() {
             processName?.let { onOtherProcessInit(it) }
         }
 
+        AMapLocationClient.setApiKey("daf2ce3d1aec0ba4cab0996985dbcc50")
+
+        //高德定位必须来保障信息安全
+        AMapLocationClient.updatePrivacyAgree(appContext, true)
+        AMapLocationClient.updatePrivacyShow(appContext, true, true)
+
         val intent = Intent(this,MessengerService::class.java)
         startService(intent)
 
     }
-
 
     /**
      * @description  代码的初始化请不要放在onCreate直接操作，按照下面新建异步方法

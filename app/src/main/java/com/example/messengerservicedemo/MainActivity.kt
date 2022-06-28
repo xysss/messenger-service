@@ -13,12 +13,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         //setContentView(R.layout.activity_main)
 
-        //请求权限
-        requestCameraPermissions()
-
+//        AMapLocationClient.setApiKey("b96f7ca9017f60d6444abce336e66f01")
+//
+//        //高德定位必须来保障信息安全
+//        AMapLocationClient.updatePrivacyAgree(appContext, true)
+//        AMapLocationClient.updatePrivacyShow(appContext, true, true)
+//
 //        val intent = Intent(this,MessengerService::class.java)
 //        startService(intent)
 
+        //这个是共享ViewModel
+        //请求权限
+        requestCameraPermissions()
     }
 
     override fun onResume() {

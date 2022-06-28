@@ -103,12 +103,6 @@ class InitComm : Task(TASK_ID, true) {
             .errorActivity(MainActivity::class.java) //发生错误跳转的activity
             .apply()
 
-        AMapLocationClient.setApiKey("b96f7ca9017f60d6444abce336e66f01")
-
-        //高德定位必须来保障信息安全
-        AMapLocationClient.updatePrivacyAgree(appContext, true)
-        AMapLocationClient.updatePrivacyShow(appContext, true, true)
-
     }
 }
 

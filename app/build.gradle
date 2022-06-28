@@ -6,6 +6,17 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        app {
+            keyAlias sign.keyAlias
+            keyPassword sign.keyPassword
+            storeFile file(sign.file)
+            storePassword sign.storePassword
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+    }
+
     compileSdk 31
     buildToolsVersion "31.0.0"
 
@@ -24,8 +35,17 @@ android {
 
     buildTypes {
         release {
+            minifyEnabled false  //指定是否开启混淆
+            zipAlignEnabled true  //Zipalign优化
+            shrinkResources false  // 去除无用资源 与lint不同
+            signingConfig signingConfigs.app
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'  //混淆时使用的规则文件
+        }
+        debug {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            zipAlignEnabled true
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
