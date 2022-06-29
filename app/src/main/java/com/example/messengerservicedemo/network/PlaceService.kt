@@ -1,4 +1,4 @@
-package com.example.messengerservicedemo.api.network
+package com.example.messengerservicedemo.network
 
 import com.example.messengerservicedemo.App
 import com.example.messengerservicedemo.response.PlaceResponse

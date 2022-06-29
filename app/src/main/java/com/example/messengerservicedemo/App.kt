@@ -5,9 +5,15 @@ import android.content.Intent
 import com.amap.api.location.AMapLocationClient
 import com.effective.android.anchors.AnchorsManager
 import com.effective.android.anchors.Project
+import com.example.messengerservicedemo.ext.logFlag
+import com.example.messengerservicedemo.ext.scope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import me.hgj.mvvmhelper.base.MvvmHelper
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.currentProcessName
+import me.hgj.mvvmhelper.ext.logE
 
 /**
  * 作者 : xys
@@ -34,12 +40,10 @@ class App: Application() {
             // 其他进程初始化
             processName?.let { onOtherProcessInit(it) }
         }
-
-        AMapLocationClient.setApiKey("daf2ce3d1aec0ba4cab0996985dbcc50")
-
         //高德定位必须来保障信息安全
         AMapLocationClient.updatePrivacyAgree(appContext, true)
         AMapLocationClient.updatePrivacyShow(appContext, true, true)
+        AMapLocationClient.setApiKey("daf2ce3d1aec0ba4cab0996985dbcc50")
 
         val intent = Intent(this,MessengerService::class.java)
         startService(intent)
@@ -68,6 +72,7 @@ class App: Application() {
     /**
      * 其他进程初始化，[processName] 进程名
      */
-    private fun onOtherProcessInit(processName: String) {}
+    private fun onOtherProcessInit(processName: String) {
+    }
 
 }

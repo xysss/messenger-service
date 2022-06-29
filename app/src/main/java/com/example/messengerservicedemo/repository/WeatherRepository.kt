@@ -1,7 +1,7 @@
 package com.example.messengerservicedemo.repository
 
 import androidx.lifecycle.liveData
-import com.example.messengerservicedemo.api.network.SunnyWeatherNetwork
+import com.example.messengerservicedemo.network.SunnyWeatherNetwork
 import com.example.messengerservicedemo.response.Place
 import com.example.messengerservicedemo.response.Weather
 import kotlinx.coroutines.Dispatchers

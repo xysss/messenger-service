@@ -1,4 +1,4 @@
-package com.example.messengerservicedemo.api.network
+package com.example.messengerservicedemo.network
 
 import retrofit2.Call
 import retrofit2.Callback

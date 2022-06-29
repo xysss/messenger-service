@@ -119,8 +119,7 @@ dependencies {
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     implementation 'androidx.work:work-runtime:2.5.0'
     implementation 'io.reactivex.rxjava2:rxjava:2.2.3'
-    //rxhttp
-    kapt 'com.github.liujingxing.rxhttp:rxhttp-compiler:2.8.3'
+
     //加载webview
     implementation 'com.just.agentweb:agentweb:4.1.3'
     implementation 'com.just.agentweb:filechooser:4.1.3'
@@ -143,6 +142,15 @@ dependencies {
 
     //Rxhttp
     implementation 'com.github.liujingxing.rxhttp:rxhttp:2.8.3'
+    //implementation 'com.ljx.rxhttp:rxhttp:2.5.2'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.0'
+    kapt 'com.github.liujingxing.rxhttp:rxhttp-compiler:2.8.3'
+
+    //lifecycleScope
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.3.1"
+    //viewModelScope
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1"
+
     //6.0以上权限请求管理
     implementation 'com.github.tbruyelle:rxpermissions:0.10.2'
 

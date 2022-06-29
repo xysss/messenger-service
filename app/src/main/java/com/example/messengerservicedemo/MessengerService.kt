@@ -4,28 +4,29 @@ import android.app.Service
 import android.content.Intent
 import android.os.*
 import android.util.Log
-import androidx.lifecycle.liveData
 import com.amap.api.location.AMapLocation
-import com.example.messengerservicedemo.api.network.SunnyWeatherNetwork
+import com.example.messengerservicedemo.network.SunnyWeatherNetwork
 import com.example.messengerservicedemo.ext.job
 import com.example.messengerservicedemo.ext.logFlag
 import com.example.messengerservicedemo.ext.scope
-import com.example.messengerservicedemo.repository.WeatherRepository
 import com.example.messengerservicedemo.response.Location
 import com.example.messengerservicedemo.response.Place
 import com.example.messengerservicedemo.response.Weather
+import com.example.messengerservicedemo.serialport.ProtocolAnalysis
+import com.example.messengerservicedemo.serialport.SerialPortHelper
 import com.example.messengerservicedemo.service.ForegroundNF
 import com.example.messengerservicedemo.util.AmapLocationUtil
+import com.example.messengerservicedemo.util.ByteUtils
 import com.example.model.UserS
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import com.serial.port.kit.core.common.TypeConversion
+import com.serial.port.manage.data.WrapReceiverData
+import com.serial.port.manage.listener.OnDataPickListener
+import kotlinx.coroutines.*
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.logE
-import java.lang.Exception
 import java.lang.ref.WeakReference
-import kotlin.coroutines.CoroutineContext
+import java.text.SimpleDateFormat
+import java.util.*
 
 /**
  * 作者 : xys
@@ -39,6 +40,7 @@ class MessengerService : Service() {
     private val mHandler = MyHandler(WeakReference(this))
     private lateinit var mMessenger: Messenger
     private var amapLocationUtil: AmapLocationUtil? = null
+    private val protocolAnalysis = ProtocolAnalysis()
 
     companion object {
         const val WHAT1 = 1
@@ -64,20 +66,56 @@ class MessengerService : Service() {
             "定位启动".logE(logFlag)
             //获取定位
             initLocationOption()
+
+            // 打开串口
+            if (!SerialPortHelper.portManager.isOpenDevice) {
+//                val open = SerialPortHelper.portManager.open()
+//                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
+
+                //设置设备消毒功能请求
+                //SerialPortHelper.setDeviceDisinfectReq(ByteUtils.Msg00)
+
+                //获取版本号
+                //SerialPortHelper.readVersion()
+
+                //获取设备设置时间和风速
+                //SerialPortHelper.getDevicePurifyReq()
+
+                //设置设备时间和风速
+                //SerialPortHelper.setDevicePurifyReq(1000,20)
+
+            }
         }
-        scope.launch(Dispatchers.Main) {
-            "服务已经启动".logE(logFlag)
-
-        }
-
-
+//        scope.launch(Dispatchers.Main) {
+//
+//        }
         return super.onStartCommand(intent, flags, startId)
     }
 
+    private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
+        override fun onSuccess(data: WrapReceiverData) {
+            "统一响应数据：${TypeConversion.bytes2HexString(data.data)}".logE(logFlag)
+
+            scope.launch(Dispatchers.IO) {
+                for (byte in data.data)
+                    protocolAnalysis.addRecLinkedDeque(byte)
+            }
+        }
+    }
+
     override fun onDestroy() {
-        mForegroundNF.stopForegroundNotification()
-        job.cancel()
         super.onDestroy()
+
+        mForegroundNF.stopForegroundNotification()
+        //取消协程
+        job.cancel()
+        // 移除统一监听回调
+        SerialPortHelper.portManager.removeDataPickListener(onDataPickListener)
+        // 关闭串口
+        val close = SerialPortHelper.portManager.close()
+        "串口关闭${if (close) "成功" else "失败"}".logE(logFlag)
+        // 销毁定位
+        amapLocationUtil?.let { it.destroyLocation() }
     }
 
     fun initLocationOption() {
@@ -114,8 +152,39 @@ class MessengerService : Service() {
         }
     }
 
-    fun refreshWeather(lng: String, lat: String, placeName: String) = fire(Dispatchers.IO) {
-        coroutineScope {
+//    fun sendRequest() {
+//        scope.launch(Dispatchers.Main){
+//            //当前运行在协程中，且在主线程运行
+//            val asyncBanner = getBanners(this) //这里返回Deferred<List<Banner>>对象
+//            val asyncPersons = getStudents(this) //这里返回Deferred<List<Student>>对象
+//            val banners = asyncBanner.await()           //这里返回List<Banner>对象
+//            val students = asyncPersons.await()         //这里返回List<Student>对象
+//            //开始更新UI
+//
+//        }
+//    }
+
+
+//    //挂断方法，获取学生信息
+//    suspend fun getBanners(scope: CoroutineScope): Deferred<List<Banner>> {
+//        return RxHttp.get("/service/...")
+//            .add("key", "value")
+//            .addHeader("headKey", "headValue")
+//            .toClass<List<Banner>>()
+//            .async(scope)  //注意这里使用async异步操作符
+//    }
+//
+//    //挂断方法，获取家庭成员信息
+//    suspend fun getStudents(scope: CoroutineScope): Deferred<List<Student>> {
+//        return RxHttp.get("/service/...")
+//            .add("key", "value")
+//            .toClass<List<Student>>()
+//            .async(scope) //注意这里使用async异步操作符
+//    }
+
+
+    fun refreshWeather(lng: String, lat: String, placeName: String){
+        scope.launch(Dispatchers.IO){
             val deferredRealtime = async {
                 SunnyWeatherNetwork.getRealtimeWeather(lng, lat)
             }
@@ -126,7 +195,7 @@ class MessengerService : Service() {
             val dailyResponse = deferredDaily.await()
             if (realtimeResponse.status == "ok" && dailyResponse.status == "ok") {
                 val weather = Weather(realtimeResponse.result.realtime, dailyResponse.result.daily)
-                weather.toString().logE(logFlag)
+                showWeatherInfo(weather)
                 Result.success(weather)
             } else {
                 Result.failure(
@@ -139,15 +208,44 @@ class MessengerService : Service() {
         }
     }
 
-    fun <T> fire(context: CoroutineContext, block: suspend () -> Result<T>) =
-        liveData<Result<T>>(context) {
-            val result = try {
-                block()
-            } catch (e: Exception) {
-                Result.failure<T>(e)
-            }
-            emit(result)
+    private fun showWeatherInfo(weather: Weather) {
+        val realtime = weather.realtime
+        val daily = weather.daily
+        // 填充now.xml布局中数据
+        //温度
+        val currentTempText = "${realtime.temperature.toInt()} ℃".logE(logFlag)
+        //湿度
+        val humidityText = "湿度: ${realtime.humidity} %".logE(logFlag)
+        //风速
+        val windSpeedText = "风速: ${realtime.wind.speed}公里/每小时".logE(logFlag)
+        //能见度
+        val visibilityText="能见度: ${realtime.visibility}公里".logE(logFlag)
+        //天气
+        val skyconText="${realtime.skycon}".logE(logFlag)
+//        val sky1 = getSky(skyconText)
+//        mViewBinding.image1One.setImageResource(sky1.icon)
+
+        //mViewBinding.nowInclude.currentSky.text = getSky(realtime.skycon).info
+        val currentPM25Text = "空气指数 ${realtime.airQuality.aqi.chn.toInt()}".logE(logFlag)
+        //mViewBinding.nowInclude.currentAQI.text = currentPM25Text
+        //mViewBinding.nowInclude.nowLayout.setBackgroundResource(getSky(realtime.skycon).bg)
+        // 填充forecast.xml布局中的数据
+        val days = daily.skycon.size
+        for (i in 1 until days) {
+            val skycon = daily.skycon[i]
+            val temperature = daily.temperature[i]
+
+            val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            "${temperature.min.toInt()} ~ ${temperature.max.toInt()} ℃".logE(logFlag)
         }
+        // 填充life_index.xml布局中的数据
+        val lifeIndex = daily.lifeIndex
+        //mViewBinding.lifeIndexInclude.coldRiskText.text = lifeIndex.coldRisk[0].desc
+        //mViewBinding.lifeIndexInclude.dressingText.text = lifeIndex.dressing[0].desc
+        //mViewBinding.tV5One.text = "紫外线指数: ${lifeIndex.ultraviolet[0].index}最大(10)"
+        "紫外线指数: ${lifeIndex.ultraviolet[0].desc}".logE(logFlag)
+        //mViewBinding.lifeIndexInclude.carWashingText.text = lifeIndex.carWashing[0].desc
+    }
 
     override fun onBind(intent: Intent): IBinder {
         Log.e("TAG", "onBind~")
