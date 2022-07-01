@@ -14,6 +14,7 @@ import com.example.messengerservicedemo.response.Place
 import com.example.messengerservicedemo.response.Weather
 import com.example.messengerservicedemo.serialport.ProtocolAnalysis
 import com.example.messengerservicedemo.serialport.SerialPortHelper
+import com.example.messengerservicedemo.serialport.model.Msg41DataModel
 import com.example.messengerservicedemo.service.ForegroundNF
 import com.example.messengerservicedemo.util.AmapLocationUtil
 import com.example.messengerservicedemo.util.ByteUtils
@@ -33,7 +34,7 @@ import java.util.*
  * 时间 : 2022-06-06 10:50
  * 描述 : 描述
  */
-class MessengerService : Service() {
+class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
 
     private lateinit var clientMsg: Message
     private lateinit var mForegroundNF: ForegroundNF
@@ -60,6 +61,10 @@ class MessengerService : Service() {
             //服务被系统kill掉之后重启进来的
             return START_NOT_STICKY
         }
+
+        //注册回调
+        protocolAnalysis.setUiCallback(this)
+
         mForegroundNF.startForegroundNotification()
 
         scope.launch(Dispatchers.IO) {
@@ -67,21 +72,27 @@ class MessengerService : Service() {
             //获取定位
             initLocationOption()
 
+            // 增加统一监听回调
+            SerialPortHelper.portManager.addDataPickListener(onDataPickListener)
+            scope.launch(Dispatchers.IO) {
+                protocolAnalysis.startDealMessage()
+            }
+
             // 打开串口
             if (!SerialPortHelper.portManager.isOpenDevice) {
-//                val open = SerialPortHelper.portManager.open()
-//                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
+                val open = SerialPortHelper.portManager.open()
+                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
 
-                //设置设备消毒功能请求
-                //SerialPortHelper.setDeviceDisinfectReq(ByteUtils.Msg00)
+                //传感器信息读取请求
+                SerialPortHelper.getSensorInfo()
 
                 //获取版本号
-                //SerialPortHelper.readVersion()
+                SerialPortHelper.readVersion()
 
                 //获取设备设置时间和风速
                 //SerialPortHelper.getDevicePurifyReq()
 
-                //设置设备时间和风速
+                //设置设备时间和
                 //SerialPortHelper.setDevicePurifyReq(1000,20)
 
             }
@@ -300,5 +311,9 @@ class MessengerService : Service() {
         } catch (e: RemoteException) {
             e.printStackTrace()
         }
+    }
+
+    override fun onDataReceive(msg41DataModel: Msg41DataModel) {
+
     }
 }

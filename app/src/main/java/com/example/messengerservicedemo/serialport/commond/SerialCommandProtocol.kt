@@ -46,6 +46,16 @@ object SerialCommandProtocol : BaseProtocol() {
         0x01.toByte()
     )
 
+    private var getSensorInfoByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x09.toByte(),
+        0x00.toByte(),
+        0x08.toByte(),
+        0x00.toByte(),
+        0x00.toByte()
+    )
+
     //获取设备净化功能请求
     var getDevicePurifyReq = byteArrayOf(
         0x55.toByte(),
@@ -131,8 +141,8 @@ object SerialCommandProtocol : BaseProtocol() {
         ) + ByteUtils.FRAME_END
     }
 
-    fun onCmdGetDevicePurifyReq(): ByteArray {
-        return this.getDevicePurifyReq + Crc8.cal_crc8_t(
+    fun getSensorInfoReq(): ByteArray {
+        return this.getSensorInfoByte + Crc8.cal_crc8_t(
             this.getDevicePurifyReq,
             this.getDevicePurifyReq.size
         ) + ByteUtils.FRAME_END

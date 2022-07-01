@@ -71,7 +71,7 @@ object SerialPortHelper {
 
     //设置设备工作模式请求
     fun setWorkModel(byte: Byte) {
-        val sends: ByteArray = SerialCommandProtocol.onCmdSetWorkModel(byte)
+        val sends: ByteArray = SerialCommandProtocol.getSensorInfoReq()
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
@@ -88,9 +88,8 @@ object SerialPortHelper {
         printLog(isSuccess, sends)
     }
 
-    //获取设备净化功能请求
-    fun getDevicePurifyReq() {
-        val sends: ByteArray = SerialCommandProtocol.onCmdGetDevicePurifyReq()
+    fun getSensorInfo() {
+        val sends: ByteArray = SerialCommandProtocol.getSensorInfoReq()
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {

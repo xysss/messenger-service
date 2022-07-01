@@ -22,7 +22,7 @@ object ByteUtils {
     const val FRAME_00: Byte = 0x00
 
     const val Msg03: Byte = 0x03.toByte()
-    const val Msg4F: Byte = 0x4F.toByte()
+    const val Msg88: Byte = 0x88.toByte()
     const val Msg41: Byte = 0x41.toByte()
     const val Msg73: Byte = 0x73.toByte()
 
