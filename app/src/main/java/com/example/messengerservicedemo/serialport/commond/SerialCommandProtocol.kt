@@ -35,17 +35,6 @@ object SerialCommandProtocol : BaseProtocol() {
         0x00.toByte()
     )
 
-    //设置工作模式
-    private var setWorkModel = byteArrayOf(
-        0x55.toByte(),
-        0x00.toByte(),
-        0x0A.toByte(),
-        0x00.toByte(),
-        0x4E.toByte(),
-        0x00.toByte(),
-        0x01.toByte()
-    )
-
     private var getSensorInfoByte = byteArrayOf(
         0x55.toByte(),
         0x00.toByte(),
@@ -56,39 +45,15 @@ object SerialCommandProtocol : BaseProtocol() {
         0x00.toByte()
     )
 
-    //获取设备净化功能请求
-    var getDevicePurifyReq = byteArrayOf(
+    private var getSensorDataByte = byteArrayOf(
         0x55.toByte(),
         0x00.toByte(),
         0x09.toByte(),
         0x00.toByte(),
-        0x72.toByte(),
+        0x04.toByte(),
         0x00.toByte(),
         0x00.toByte()
     )
-
-    //设置设备净化功能请求
-    var setDevicePurifyReq = byteArrayOf(
-        0x55.toByte(),
-        0x00.toByte(),
-        0x0D.toByte(),
-        0x00.toByte(),
-        0x56.toByte(),
-        0x00.toByte(),
-        0x04.toByte()
-    )
-
-    //设置设备消毒功能请求
-    var setDeviceDisinfectReq = byteArrayOf(
-        0x55.toByte(),
-        0x00.toByte(),
-        0x0A.toByte(),
-        0x00.toByte(),
-        0x50.toByte(),
-        0x00.toByte(),
-        0x01.toByte()
-    )
-
 
     /**
      * 升级指令
@@ -132,41 +97,17 @@ object SerialCommandProtocol : BaseProtocol() {
         ) + ByteUtils.FRAME_END
     }
 
-
-    fun onCmdSetWorkModel(byte: Byte): ByteArray {
-        val resultByte = setWorkModel + byte
-        return resultByte + Crc8.cal_crc8_t(
-            resultByte,
-            resultByte.size
-        ) + ByteUtils.FRAME_END
-    }
-
     fun getSensorInfoReq(): ByteArray {
         return this.getSensorInfoByte + Crc8.cal_crc8_t(
-            this.getDevicePurifyReq,
-            this.getDevicePurifyReq.size
+            this.getSensorInfoByte,
+            this.getSensorInfoByte.size
         ) + ByteUtils.FRAME_END
     }
 
-    fun onCmdSetDevicePurifyReq(timing: Int, speed: Int): ByteArray {
-        val timingByteArray = ByteArray(2)
-        timingByteArray.writeInt16LE(timing)
-        val speedByteArray = ByteArray(1)
-        speedByteArray.writeInt8(speed)
-
-        val resultByte = setDevicePurifyReq + timingByteArray + speedByteArray + ByteUtils.Msg00
-
-        return resultByte + Crc8.cal_crc8_t(
-            resultByte,
-            resultByte.size
-        ) + ByteUtils.FRAME_END
-    }
-
-    fun onCmdSetDeviceDisinfectReq(byte: Byte): ByteArray {
-        val resultByte = setDeviceDisinfectReq + byte
-        return resultByte + Crc8.cal_crc8_t(
-            resultByte,
-            resultByte.size
+    fun getSensorDaraReq(): ByteArray {
+        return this.getSensorDataByte + Crc8.cal_crc8_t(
+            this.getSensorDataByte,
+            this.getSensorDataByte.size
         ) + ByteUtils.FRAME_END
     }
 

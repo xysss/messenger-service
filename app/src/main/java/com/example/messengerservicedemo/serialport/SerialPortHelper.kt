@@ -69,25 +69,6 @@ object SerialPortHelper {
         printLog(isSuccess, sends)
     }
 
-    //设置设备工作模式请求
-    fun setWorkModel(byte: Byte) {
-        val sends: ByteArray = SerialCommandProtocol.getSensorInfoReq()
-        val isSuccess: Boolean = serialPortManager.send(
-            WrapSendData(sends, 3000, 300, 1),
-            object : OnDataReceiverListener {
-                override fun onSuccess(data: WrapReceiverData) {
-                    val buffer: ByteArray = data.data
-                }
-                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
-                    "onFailed: $msg".logE(logFlag)
-                }
-                override fun onTimeOut() {
-                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
-                }
-            })
-        printLog(isSuccess, sends)
-    }
-
     fun getSensorInfo() {
         val sends: ByteArray = SerialCommandProtocol.getSensorInfoReq()
         val isSuccess: Boolean = serialPortManager.send(
@@ -106,9 +87,8 @@ object SerialPortHelper {
         printLog(isSuccess, sends)
     }
 
-    //设置设备净化数据请求
-    fun setDevicePurifyReq(timing :Int,speed:Int) {
-        val sends: ByteArray = SerialCommandProtocol.onCmdSetDevicePurifyReq(timing,speed)
+    fun getSensorData() {
+        val sends: ByteArray = SerialCommandProtocol.getSensorDaraReq()
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
@@ -124,27 +104,6 @@ object SerialPortHelper {
             })
         printLog(isSuccess, sends)
     }
-
-    //设置设备消毒功能请求
-    fun setDeviceDisinfectReq(byte: Byte) {
-        val sends: ByteArray = SerialCommandProtocol.onCmdSetDeviceDisinfectReq(byte)
-        val isSuccess: Boolean = serialPortManager.send(
-            WrapSendData(sends, 3000, 300, 1),
-            object : OnDataReceiverListener {
-                override fun onSuccess(data: WrapReceiverData) {
-                    val buffer: ByteArray = data.data
-                }
-                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
-                    "onFailed: $msg".logE(logFlag)
-                }
-                override fun onTimeOut() {
-                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
-                }
-            })
-        printLog(isSuccess, sends)
-    }
-
-
 
     /**
      * 检测回调数据是否符合要求

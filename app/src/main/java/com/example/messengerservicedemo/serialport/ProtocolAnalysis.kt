@@ -1,8 +1,7 @@
 package com.example.messengerservicedemo.serialport
 
 import com.example.messengerservicedemo.ext.*
-import com.example.messengerservicedemo.serialport.model.Msg41DataModel
-import com.example.messengerservicedemo.serialport.model.NfcModel
+import com.example.messengerservicedemo.serialport.model.SensorData
 import com.example.messengerservicedemo.serialport.model.SensorModel
 import com.example.messengerservicedemo.util.ByteUtils
 import com.example.messengerservicedemo.util.Crc8
@@ -26,20 +25,15 @@ class ProtocolAnalysis {
     private var beforeIsFF = false
     private lateinit var recall: ReceiveDataCallBack
 
-    private lateinit var sensorStatus: String
-    private lateinit var voc: String
-    private lateinit var dust: String
-    private lateinit var temp: String
-    private lateinit var dumity: String
-    private lateinit var nfcMode1: NfcModel
-    private lateinit var nfcMode2: NfcModel
-    private lateinit var nfcMode3: NfcModel
-    private lateinit var workPattern: String
-    private lateinit var electricalMachinery: String
-    private lateinit var disinfectionFunction: String
-    private lateinit var bhState: String
-    private lateinit var infraredState: String
-    private lateinit var deviceState: String
+    private lateinit var senId: String
+    private lateinit var senState: String
+    private lateinit var sensorValue: String
+    private lateinit var senOverFlow: String
+    private lateinit var senDecimalLen: String
+    private lateinit var senTempState: String
+    private lateinit var senTempValue: String
+    private lateinit var senHumidityState: String
+    private lateinit var senHumidityValue: String
     private val sensorArray = ArrayList<SensorModel>()
 
     fun setUiCallback(dataCallback: ReceiveDataCallBack) {
@@ -141,30 +135,13 @@ class ProtocolAnalysis {
                         dealMsg88(it)
                     }
                 }
-                //获取设备净化功能响应
-                ByteUtils.Msg73 -> {
+
+                ByteUtils.Msg84 -> {
                     scope.launch(Dispatchers.IO) {
-                        dealMsg73(it)
+                        dealMsg84(it)
                     }
                 }
-                //设置设备净化数据响应
-                ByteUtils.Msg57 -> {
-                    scope.launch(Dispatchers.IO) {
-                        dealMsg57(it)
-                    }
-                }
-                //数据响应，通知
-                ByteUtils.Msg41 -> {
-                    scope.launch(Dispatchers.IO) {
-                        dealMsg41(it)
-                    }
-                }
-                //数据响应，通知
-                ByteUtils.Msg51 -> {
-                    scope.launch(Dispatchers.IO) {
-                        dealMsg51(it)
-                    }
-                }
+
                 else -> it[4].toInt().logE("xysLog")
             }
         }
@@ -197,7 +174,7 @@ class ProtocolAnalysis {
         mBytes.let {
             if (it.size > 10) {
                 val sensorNum = it.readByteArrayBE(7 + 0, 2).readInt16LE()
-                for (i in 0..sensorNum) {
+                for (i in 0 until sensorNum) {
                     val sensorId = it[7 + 2 + i * 37].toInt().toString()
                     val sensorType = it.readByteArrayBE(7 + 3 + i * 37, 2).readInt16LE().toString()
                     val sensorVersion =
@@ -238,134 +215,51 @@ class ProtocolAnalysis {
                         sensorFullScale,
                         sensorSensibility
                     )
-
                     sensorModel.toString().logE(logFlag)
                     sensorArray.add(sensorModel)
-
                 }
 
             }
         }
     }
 
-    private fun dealMsg73(mBytes: ByteArray) {
+    private fun dealMsg84(mBytes: ByteArray) {
         mBytes.let {
-            if (it.size == 13) {
-                val timing = it.readByteArrayBE(7, 2).readInt32LE().toString()
-                val speed = it[9].toInt().toString()
-                "设备净化功能响应成功: $timing,$speed".logE("xysLog")
-            }
-        }
-    }
-
-    private fun dealMsg57(mBytes: ByteArray) {
-        mBytes.let {
-            if (it.size == 10) {
-                if (it[7].toInt() == 0)
-                    "设备消毒功能响应成功".logE("xysLog")
-                else if (it[7].toInt() == 1) {
-                    "设备消毒功能响应失败".logE("xysLog")
-                }
-            }
-        }
-    }
-
-    private fun dealMsg51(mBytes: ByteArray) {
-        mBytes.let {
-            if (it.size == 10) {
-                if (it[7].toInt() == 0)
-                    "设置设备净化数据响应成功".logE("xysLog")
-                else if (it[7].toInt() == 1) {
-                    "设置设备净化数据响应失败".logE("xysLog")
-                }
-            }
-        }
-    }
-
-    private fun dealMsg41(mBytes: ByteArray) {
-        mBytes.let {
-            if (it.size > 77) {
-                "实时数据解析成功: ${it.toHexString()}".logE("xysLog")
-                //传感器数据
+            if (it.size > 25) {
                 if (it[7] == ByteUtils.Msg26) {
-                    sensorStatus = it[10].toInt().toString()
-                    voc = it.readByteArrayBE(11, 4).readFloatLE().toInt().toString()
-                    dust = String.format("%.2f", it.readByteArrayBE(15, 4).readFloatLE())
-                    temp = it.readByteArrayBE(19, 4).readFloatLE().toInt().toString()
-                    dumity = it.readByteArrayBE(23, 4).readFloatLE().toInt().toString()
+                    senId = it[10].toInt().toString()
+                    senState = it[11].toInt().toString()  //0-无故障，1-故障
+                    sensorValue = it.readByteArrayBE(12, 2).readInt16LE().toString()
+                    senOverFlow = it[14].toInt().toString()  //0-未溢出，1-溢出
+                    senDecimalLen = it[15].toInt().toString()  ////小数点后位数
                 }
-                //三个NFC数据
-                if (it[27] == ByteUtils.Msg60) {
-                    val nfcStatus1 = it[30].toInt().toString()
-                    val num1 = it[31].toInt().toString()
-                    val userTime1 = it[32].toInt().toString()
-                    val reminder1 = it[33].toInt().toString()
-                    val sn1 = it.readByteArrayBE(34, 4).readInt32LE().toString()
-                    nfcMode1 = NfcModel(nfcStatus1, num1, userTime1, reminder1, sn1)
-
-                    val nfcStatus2 = it[38].toInt().toString()
-                    val num2 = it[39].toInt().toString()
-                    val userTime2 = it[40].toInt().toString()
-                    val reminder2 = it[41].toInt().toString()
-                    val sn2 = it.readByteArrayBE(42, 4).readInt32LE().toString()
-                    nfcMode2 = NfcModel(nfcStatus2, num2, userTime2, reminder2, sn2)
-
-                    val nfcStatus3 = it[46].toInt().toString()
-                    val num3 = it[47].toInt().toString()
-                    val userTime3 = it[48].toInt().toString()
-                    val reminder3 = it[49].toInt().toString()
-                    val sn3 = it.readByteArrayBE(50, 4).readInt32LE().toString()
-                    nfcMode3 = NfcModel(nfcStatus3, num3, userTime3, reminder3, sn3)
-
+                if (it[16] == ByteUtils.Msg61) {
+                    senTempState = it[19].toInt().toString()  //0-无故障，1-故障
+                    senTempValue = it[20].toInt().toString()  //温度，有符号单字节整数，单位：摄氏度
                 }
-                //设备工作模式
-                if (it[54] == ByteUtils.Msg61) {
-                    workPattern = it[57].toInt().toString()
-                }
-                //电机状态
-                if (it[58] == ByteUtils.Msg62) {
-                    electricalMachinery = it[61].toInt().toString()
-                }
-                //消毒功能
-                if (it[62] == ByteUtils.Msg63) {
-                    disinfectionFunction = it[65].toInt().toString()
-                }
-                //童锁状态
-                if (it[66] == ByteUtils.Msg64) {
-                    bhState = it[69].toInt().toString()
-                }
-                //红外遥控配对状态
-                if (it[70] == ByteUtils.Msg65) {
-                    infraredState = it[73].toInt().toString()
-                }
-                //设备状态
-                if (it[74] == ByteUtils.Msg66) {
-                    deviceState = it[77].toInt().toString()
+                if (it[21] == ByteUtils.Msg62) {
+                    senHumidityState = it[24].toInt().toString()  //0-无故障，1-故障
+                    senHumidityValue = it[25].toInt().toString()  //湿度，无符号单字节整数，单位：%
                 }
 
-                val msg41DataModel = Msg41DataModel(
-                    sensorStatus,
-                    voc,
-                    dust,
-                    temp,
-                    dumity,
-                    nfcMode1,
-                    nfcMode2,
-                    nfcMode3,
-                    workPattern,
-                    electricalMachinery,
-                    disinfectionFunction,
-                    bhState,
-                    infraredState,
-                    deviceState
+                val sensorData = SensorData(
+                    senId,
+                    senState,
+                    sensorValue,
+                    senOverFlow,
+                    senDecimalLen,
+                    senTempState,
+                    senTempValue,
+                    senHumidityState,
+                    senHumidityValue
                 )
+                sensorData.toString().logE(logFlag)
 
-                recall.onDataReceive(msg41DataModel)
             }
         }
     }
 
     interface ReceiveDataCallBack {
-        fun onDataReceive(msg41DataModel: Msg41DataModel)
+        fun onDataReceive(sensorData: SensorData)
     }
 }

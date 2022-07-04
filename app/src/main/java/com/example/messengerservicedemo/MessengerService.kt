@@ -14,10 +14,9 @@ import com.example.messengerservicedemo.response.Place
 import com.example.messengerservicedemo.response.Weather
 import com.example.messengerservicedemo.serialport.ProtocolAnalysis
 import com.example.messengerservicedemo.serialport.SerialPortHelper
-import com.example.messengerservicedemo.serialport.model.Msg41DataModel
+import com.example.messengerservicedemo.serialport.model.SensorData
 import com.example.messengerservicedemo.service.ForegroundNF
 import com.example.messengerservicedemo.util.AmapLocationUtil
-import com.example.messengerservicedemo.util.ByteUtils
 import com.example.model.UserS
 import com.serial.port.kit.core.common.TypeConversion
 import com.serial.port.manage.data.WrapReceiverData
@@ -80,20 +79,14 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
 
             // 打开串口
             if (!SerialPortHelper.portManager.isOpenDevice) {
-                val open = SerialPortHelper.portManager.open()
-                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
-
-                //传感器信息读取请求
-                SerialPortHelper.getSensorInfo()
-
-                //获取版本号
-                SerialPortHelper.readVersion()
-
-                //获取设备设置时间和风速
-                //SerialPortHelper.getDevicePurifyReq()
-
-                //设置设备时间和
-                //SerialPortHelper.setDevicePurifyReq(1000,20)
+//                val open = SerialPortHelper.portManager.open()
+//                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
+//
+//                //传感器信息读取请求
+//                SerialPortHelper.getSensorInfo()
+//
+//                //传感器信息数据
+//                SerialPortHelper.getSensorData()
 
             }
         }
@@ -129,7 +122,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
         amapLocationUtil?.let { it.destroyLocation() }
     }
 
-    fun initLocationOption() {
+    private fun initLocationOption() {
         if (null == amapLocationUtil) {
             amapLocationUtil = AmapLocationUtil(appContext)
         }
@@ -313,7 +306,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
         }
     }
 
-    override fun onDataReceive(msg41DataModel: Msg41DataModel) {
+    override fun onDataReceive(sensorData: SensorData) {
 
     }
 }
