@@ -87,6 +87,24 @@ object SerialPortHelper {
         printLog(isSuccess, sends)
     }
 
+    fun sendWeatherData(bytes: ByteArray) {
+        val sends: ByteArray = SerialCommandProtocol.putWeatherData(bytes)
+        val isSuccess: Boolean = serialPortManager.send(
+            WrapSendData(sends, 3000, 300, 1),
+            object : OnDataReceiverListener {
+                override fun onSuccess(data: WrapReceiverData) {
+                    val buffer: ByteArray = data.data
+                }
+                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
+                    "onFailed: $msg".logE(logFlag)
+                }
+                override fun onTimeOut() {
+                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                }
+            })
+        printLog(isSuccess, sends)
+    }
+
     fun getSensorData() {
         val sends: ByteArray = SerialCommandProtocol.getSensorDaraReq()
         val isSuccess: Boolean = serialPortManager.send(

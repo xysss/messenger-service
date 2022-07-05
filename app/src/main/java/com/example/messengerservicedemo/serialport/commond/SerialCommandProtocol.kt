@@ -111,6 +111,13 @@ object SerialCommandProtocol : BaseProtocol() {
         ) + ByteUtils.FRAME_END
     }
 
+    fun putWeatherData(byteArray: ByteArray): ByteArray {
+        return byteArray + Crc8.cal_crc8_t(
+            byteArray,
+            byteArray.size
+        ) + ByteUtils.FRAME_END
+    }
+
     /**
      * 准备进入升级模式
      *

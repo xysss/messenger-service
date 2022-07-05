@@ -12,7 +12,7 @@ class RealtimeResponse(val status: String, val result: Result) {
 
     class Result(val realtime: Realtime)
 
-    class Realtime(val skycon: String, val temperature: Float, val humidity :Float, val visibility:Float,
+    class Realtime(val skycon: String, val temperature: Float, val humidity :Float,val cloudrate :Float, val visibility:Float,
                    @SerializedName("air_quality") val airQuality: AirQuality,
                    @SerializedName("wind") val wind: Wind
     )

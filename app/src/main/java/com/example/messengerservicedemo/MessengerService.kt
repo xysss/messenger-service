@@ -21,6 +21,10 @@ import com.example.model.UserS
 import com.serial.port.kit.core.common.TypeConversion
 import com.serial.port.manage.data.WrapReceiverData
 import com.serial.port.manage.listener.OnDataPickListener
+import com.swallowsonny.convertextlibrary.writeFloatLE
+import com.swallowsonny.convertextlibrary.writeInt16LE
+import com.swallowsonny.convertextlibrary.writeInt32LE
+import com.swallowsonny.convertextlibrary.writeInt8
 import kotlinx.coroutines.*
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.logE
@@ -41,6 +45,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
     private lateinit var mMessenger: Messenger
     private var amapLocationUtil: AmapLocationUtil? = null
     private val protocolAnalysis = ProtocolAnalysis()
+    private var age=0
 
     companion object {
         const val WHAT1 = 1
@@ -79,14 +84,13 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
 
             // 打开串口
             if (!SerialPortHelper.portManager.isOpenDevice) {
-//                val open = SerialPortHelper.portManager.open()
-//                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
-//
-//                //传感器信息读取请求
-//                SerialPortHelper.getSensorInfo()
-//
-//                //传感器信息数据
-//                SerialPortHelper.getSensorData()
+                val open = SerialPortHelper.portManager.open()
+                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
+
+                //传感器信息读取请求
+                SerialPortHelper.getSensorInfo()
+                //传感器信息数据
+                SerialPortHelper.getSensorData()
 
             }
         }
@@ -222,8 +226,11 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
         val humidityText = "湿度: ${realtime.humidity} %".logE(logFlag)
         //风速
         val windSpeedText = "风速: ${realtime.wind.speed}公里/每小时".logE(logFlag)
+        //
+        val windDirection = "地表 10 米风向: ${realtime.wind.direction}".logE(logFlag)
         //能见度
         val visibilityText="能见度: ${realtime.visibility}公里".logE(logFlag)
+        val cloudrate="总云量: ${realtime.cloudrate}".logE(logFlag)
         //天气
         val skyconText="${realtime.skycon}".logE(logFlag)
 //        val sky1 = getSky(skyconText)
@@ -249,6 +256,44 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
         //mViewBinding.tV5One.text = "紫外线指数: ${lifeIndex.ultraviolet[0].index}最大(10)"
         "紫外线指数: ${lifeIndex.ultraviolet[0].desc}".logE(logFlag)
         //mViewBinding.lifeIndexInclude.carWashingText.text = lifeIndex.carWashing[0].desc
+
+        val weatherIdByte = ByteArray(1)
+        weatherIdByte.writeInt8(10)
+
+        val airApiByte = ByteArray(2)
+        airApiByte.writeInt16LE(realtime.airQuality.aqi.chn.toInt())
+
+        val maxTempByte = ByteArray(4)
+        maxTempByte.writeFloatLE(daily.temperature[0].max)
+
+        val minTempByte = ByteArray(4)
+        minTempByte.writeFloatLE(daily.temperature[0].min)
+
+        val nowTempByte = ByteArray(4)
+        nowTempByte.writeFloatLE(realtime.temperature)
+
+        val humidityByte= ByteArray(4)
+        humidityByte.writeFloatLE(realtime.humidity)
+
+        val windDirectionByte= ByteArray(4)
+        windDirectionByte.writeFloatLE(realtime.wind.direction)
+
+        val windSpeedByte= ByteArray(4)
+        windSpeedByte.writeFloatLE(realtime.wind.speed)
+
+        val cloudrateByte= ByteArray(4)
+        cloudrateByte.writeFloatLE(realtime.cloudrate)
+
+        val rainfallByte= ByteArray(4)
+        rainfallByte.writeFloatLE(realtime.cloudrate)
+
+        val unitByte= ByteArray(4)
+        unitByte.writeFloatLE(realtime.cloudrate)
+
+        val weatherByteArray=weatherIdByte+airApiByte+maxTempByte+minTempByte+
+                nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+unitByte
+        //发送天气数据
+        SerialPortHelper.sendWeatherData(weatherByteArray)
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -294,7 +339,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
     private fun replyToClient(msg: Message) {
         val clientMessenger = msg.replyTo
         val replyMessage = Message.obtain(null, WHAT1)
-        val userS = UserS("小明", 25)
+        val userS = UserS("小明", age++)
         replyMessage.data = Bundle().apply {
             putSerializable("person", userS)
             //putString("reply", replyText)

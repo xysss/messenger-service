@@ -59,11 +59,6 @@ class InitNetWork : Task(TASK_ID, true) {
     override fun run(name: String) {
         //传入自己的OKHttpClient 并添加了自己的拦截器
         RxHttpPlugins.init(NetHttpClient.getDefaultOkHttpClient().build())
-
-        AMapLocationClient.setApiKey("daf2ce3d1aec0ba4cab0996985dbcc50")
-        //高德定位必须来保障信息安全
-        AMapLocationClient.updatePrivacyAgree(appContext, true)
-        AMapLocationClient.updatePrivacyShow(appContext, true, true)
     }
 }
 
