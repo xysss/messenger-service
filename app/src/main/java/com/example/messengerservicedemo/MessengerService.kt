@@ -4,11 +4,17 @@ import android.app.Service
 import android.content.Intent
 import android.os.*
 import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import com.amap.api.location.AMapLocation
-import com.example.messengerservicedemo.network.SunnyWeatherNetwork
+import com.blankj.utilcode.util.ToastUtils
 import com.example.messengerservicedemo.ext.job
 import com.example.messengerservicedemo.ext.logFlag
 import com.example.messengerservicedemo.ext.scope
+import com.example.messengerservicedemo.network.SunnyWeatherNetwork
+import com.example.messengerservicedemo.network.manager.NetState
+import com.example.messengerservicedemo.network.manager.NetworkStateManager
 import com.example.messengerservicedemo.response.Location
 import com.example.messengerservicedemo.response.Place
 import com.example.messengerservicedemo.response.Weather
@@ -23,7 +29,6 @@ import com.serial.port.manage.data.WrapReceiverData
 import com.serial.port.manage.listener.OnDataPickListener
 import com.swallowsonny.convertextlibrary.writeFloatLE
 import com.swallowsonny.convertextlibrary.writeInt16LE
-import com.swallowsonny.convertextlibrary.writeInt32LE
 import com.swallowsonny.convertextlibrary.writeInt8
 import kotlinx.coroutines.*
 import me.hgj.mvvmhelper.base.appContext
@@ -32,12 +37,13 @@ import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 /**
  * 作者 : xys
  * 时间 : 2022-06-06 10:50
  * 描述 : 描述
  */
-class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
+class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, LifecycleOwner {
 
     private lateinit var clientMsg: Message
     private lateinit var mForegroundNF: ForegroundNF
@@ -46,6 +52,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
     private var amapLocationUtil: AmapLocationUtil? = null
     private val protocolAnalysis = ProtocolAnalysis()
     private var age=0
+    private lateinit var mLifecycleRegistry: LifecycleRegistry
 
     companion object {
         const val WHAT1 = 1
@@ -82,22 +89,41 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
                 protocolAnalysis.startDealMessage()
             }
 
-            // 打开串口
-            if (!SerialPortHelper.portManager.isOpenDevice) {
-                val open = SerialPortHelper.portManager.open()
-                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
-
-                //传感器信息读取请求
-                SerialPortHelper.getSensorInfo()
-                //传感器信息数据
-                SerialPortHelper.getSensorData()
-
-            }
+//            // 打开串口
+//            if (!SerialPortHelper.portManager.isOpenDevice) {
+//                val open = SerialPortHelper.portManager.open()
+//                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
+//
+//                //传感器信息读取请求
+//                SerialPortHelper.getSensorInfo()
+//                //传感器信息数据
+//                SerialPortHelper.getSensorData()
+//
+//            }
         }
 //        scope.launch(Dispatchers.Main) {
 //
 //        }
+
+        mLifecycleRegistry =  LifecycleRegistry(this)
+        //网络监听
+        NetworkStateManager.instance.mNetworkStateCallback.observe(this){
+            onNetworkStateChanged(it)
+        }
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    /**
+     * 示例，在Activity/Fragment中如果想监听网络变化，可重写onNetworkStateChanged该方法
+     */
+    private fun onNetworkStateChanged(netState: NetState) {
+        if (netState.isSuccess) {
+            ToastUtils.showShort("终于有网了!")
+            "终于有网了!".logE(logFlag)
+        } else {
+            ToastUtils.showShort("网络无连接!")
+            "网络无连接!".logE(logFlag)
+        }
     }
 
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
@@ -293,9 +319,12 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
         val weatherByteArray=weatherIdByte+airApiByte+maxTempByte+minTempByte+
                 nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+unitByte
         //发送天气数据
-        SerialPortHelper.sendWeatherData(weatherByteArray)
-    }
+        //SerialPortHelper.sendWeatherData(weatherByteArray)
 
+
+
+
+    }
     override fun onBind(intent: Intent): IBinder {
         Log.e("TAG", "onBind~")
         //传入Handler实例化Messenger
@@ -353,5 +382,9 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack{
 
     override fun onDataReceive(sensorData: SensorData) {
 
+    }
+
+    override fun getLifecycle(): Lifecycle {
+        return mLifecycleRegistry
     }
 }

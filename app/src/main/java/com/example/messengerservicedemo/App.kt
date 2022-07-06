@@ -5,15 +5,9 @@ import android.content.Intent
 import com.amap.api.location.AMapLocationClient
 import com.effective.android.anchors.AnchorsManager
 import com.effective.android.anchors.Project
-import com.example.messengerservicedemo.ext.logFlag
-import com.example.messengerservicedemo.ext.scope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import me.hgj.mvvmhelper.base.MvvmHelper
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.currentProcessName
-import me.hgj.mvvmhelper.ext.logE
 
 /**
  * 作者 : xys
