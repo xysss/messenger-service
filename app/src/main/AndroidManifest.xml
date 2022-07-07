@@ -57,6 +57,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.example.messenger.Server.Action" />
+<!--                <category android:name="com.example.messenger.MY_CATEGORY"/>-->
             </intent-filter>
         </service>
         <!-- 定位需要的服务 使用2.0的定位需要加上这个 -->
