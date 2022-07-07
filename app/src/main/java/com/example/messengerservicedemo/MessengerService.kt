@@ -2,6 +2,9 @@ package com.example.messengerservicedemo
 
 import android.app.Service
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.wifi.WifiManager
 import android.os.*
 import android.util.Log
 import androidx.lifecycle.Lifecycle
@@ -9,12 +12,11 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import com.amap.api.location.AMapLocation
 import com.blankj.utilcode.util.ToastUtils
-import com.example.messengerservicedemo.ext.job
-import com.example.messengerservicedemo.ext.logFlag
-import com.example.messengerservicedemo.ext.scope
+import com.example.messengerservicedemo.ext.*
 import com.example.messengerservicedemo.network.SunnyWeatherNetwork
 import com.example.messengerservicedemo.network.manager.NetState
 import com.example.messengerservicedemo.network.manager.NetworkStateManager
+import com.example.messengerservicedemo.network.manager.NetworkStateReceive
 import com.example.messengerservicedemo.response.Location
 import com.example.messengerservicedemo.response.Place
 import com.example.messengerservicedemo.response.Weather
@@ -52,7 +54,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     private var amapLocationUtil: AmapLocationUtil? = null
     private val protocolAnalysis = ProtocolAnalysis()
     private var age=0
-    private lateinit var mLifecycleRegistry: LifecycleRegistry
+    private var mLifecycleRegistry =  LifecycleRegistry(this)
+    private var netWorkReceiver: NetworkStateReceive? = null
 
     companion object {
         const val WHAT1 = 1
@@ -65,6 +68,12 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         super.onCreate()
         mForegroundNF = ForegroundNF(this)
         mForegroundNF.startForegroundNotification()
+        mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    }
+
+    override fun onStart(intent: Intent?, startId: Int) {
+        super.onStart(intent, startId)
+        mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -85,27 +94,30 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
             // 增加统一监听回调
             SerialPortHelper.portManager.addDataPickListener(onDataPickListener)
-            scope.launch(Dispatchers.IO) {
-                protocolAnalysis.startDealMessage()
+            //开始处理串口信息
+            protocolAnalysis.startDealMessage()
+
+            // 打开串口
+            if (!SerialPortHelper.portManager.isOpenDevice) {
+                val open = SerialPortHelper.portManager.open()
+                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
+                //传感器信息读取请求
+                SerialPortHelper.getSensorInfo()
+                //传感器信息数据
+                SerialPortHelper.getSensorData()
             }
-
-//            // 打开串口
-//            if (!SerialPortHelper.portManager.isOpenDevice) {
-//                val open = SerialPortHelper.portManager.open()
-//                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
-//
-//                //传感器信息读取请求
-//                SerialPortHelper.getSensorInfo()
-//                //传感器信息数据
-//                SerialPortHelper.getSensorData()
-//
-//            }
         }
-//        scope.launch(Dispatchers.Main) {
-//
-//        }
 
-        mLifecycleRegistry =  LifecycleRegistry(this)
+        //注册网络状态监听广播
+        netWorkReceiver = NetworkStateReceive()
+        val filter = IntentFilter()
+        filter.apply {
+            addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
+            addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
+            addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+        }
+        registerReceiver(netWorkReceiver, filter)
+
         //网络监听
         NetworkStateManager.instance.mNetworkStateCallback.observe(this){
             onNetworkStateChanged(it)
@@ -118,11 +130,15 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
      */
     private fun onNetworkStateChanged(netState: NetState) {
         if (netState.isSuccess) {
-            ToastUtils.showShort("终于有网了!")
-            "终于有网了!".logE(logFlag)
+            //ToastUtils.showShort("终于有网了!")
+            "终于有网了!Service".logE(logFlag)
+            if (!mmkv.getBoolean(ValueKey.isFirstInitSuccess,false)){
+                //获取定位
+                initLocationOption()
+            }
         } else {
-            ToastUtils.showShort("网络无连接!")
-            "网络无连接!".logE(logFlag)
+            //ToastUtils.showShort("网络无连接!")
+            "网络无连接!Service".logE(logFlag)
         }
     }
 
@@ -139,6 +155,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
     override fun onDestroy() {
         super.onDestroy()
+        mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
 
         mForegroundNF.stopForegroundNotification()
         //取消协程
@@ -176,46 +193,16 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                     if (isSucdess) {
                         "定位成功".logE(logFlag)
                         refreshWeather(location.lng,location.lat,place.address)
-
+                        mmkv.putBoolean(ValueKey.isFirstInitSuccess,true)
                     } else {
                         //定位失败，重试定位
-                        it.startLocation()
+                        //it.startLocation()
+                        mmkv.putBoolean(ValueKey.isFirstInitSuccess,false)
                     }
                 }
             })
         }
     }
-
-//    fun sendRequest() {
-//        scope.launch(Dispatchers.Main){
-//            //当前运行在协程中，且在主线程运行
-//            val asyncBanner = getBanners(this) //这里返回Deferred<List<Banner>>对象
-//            val asyncPersons = getStudents(this) //这里返回Deferred<List<Student>>对象
-//            val banners = asyncBanner.await()           //这里返回List<Banner>对象
-//            val students = asyncPersons.await()         //这里返回List<Student>对象
-//            //开始更新UI
-//
-//        }
-//    }
-
-
-//    //挂断方法，获取学生信息
-//    suspend fun getBanners(scope: CoroutineScope): Deferred<List<Banner>> {
-//        return RxHttp.get("/service/...")
-//            .add("key", "value")
-//            .addHeader("headKey", "headValue")
-//            .toClass<List<Banner>>()
-//            .async(scope)  //注意这里使用async异步操作符
-//    }
-//
-//    //挂断方法，获取家庭成员信息
-//    suspend fun getStudents(scope: CoroutineScope): Deferred<List<Student>> {
-//        return RxHttp.get("/service/...")
-//            .add("key", "value")
-//            .toClass<List<Student>>()
-//            .async(scope) //注意这里使用async异步操作符
-//    }
-
 
     fun refreshWeather(lng: String, lat: String, placeName: String){
         scope.launch(Dispatchers.IO){
@@ -326,11 +313,17 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
     }
     override fun onBind(intent: Intent): IBinder {
+        mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         Log.e("TAG", "onBind~")
         //传入Handler实例化Messenger
         mMessenger = Messenger(mHandler)
         //将Messenger中的binder返回给客户端,让它可以远程调用
         return mMessenger.binder
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        return super.onUnbind(intent)
     }
 
     private class MyHandler(val wrActivity: WeakReference<MessengerService>) : Handler(Looper.getMainLooper()) {

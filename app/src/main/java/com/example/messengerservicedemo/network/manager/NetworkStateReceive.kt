@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
+import com.example.messengerservicedemo.ext.logFlag
+import me.hgj.mvvmhelper.ext.logE
 
 /**
  * 作者 : xys
