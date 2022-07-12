@@ -4,6 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.*
 import android.util.Log
@@ -12,6 +13,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import com.amap.api.location.AMapLocation
 import com.blankj.utilcode.util.ToastUtils
+import com.example.messengerservicedemo.api.NetUrl
 import com.example.messengerservicedemo.ext.*
 import com.example.messengerservicedemo.network.SunnyWeatherNetwork
 import com.example.messengerservicedemo.network.manager.NetState
@@ -25,6 +27,8 @@ import com.example.messengerservicedemo.serialport.SerialPortHelper
 import com.example.messengerservicedemo.serialport.model.SensorData
 import com.example.messengerservicedemo.service.ForegroundNF
 import com.example.messengerservicedemo.util.AmapLocationUtil
+import com.example.messengerservicedemo.util.Android10DownloadFactory
+import com.example.messengerservicedemo.util.UriUtils
 import com.example.model.UserS
 import com.serial.port.kit.core.common.TypeConversion
 import com.serial.port.manage.data.WrapReceiverData
@@ -33,8 +37,15 @@ import com.swallowsonny.convertextlibrary.writeFloatLE
 import com.swallowsonny.convertextlibrary.writeInt16LE
 import com.swallowsonny.convertextlibrary.writeInt8
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.logE
+import me.hgj.mvvmhelper.ext.msg
+import rxhttp.toFlow
+import rxhttp.wrapper.entity.Progress
+import rxhttp.wrapper.param.RxHttp
+import java.io.File
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
@@ -118,11 +129,98 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         }
         registerReceiver(netWorkReceiver, filter)
 
+
+        downLoad({
+            //下载中
+            "下载进度：${it.progress}%".logE(logFlag)
+        }, {
+            //下载完成
+            "下载成功，路径为：${it}".logE(logFlag)
+        }, {
+            //下载失败
+            it.msg.logE(logFlag)
+        })
+
         //网络监听
         NetworkStateManager.instance.mNetworkStateCallback.observe(this){
             onNetworkStateChanged(it)
         }
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    fun downLoad(downLoadData: (Progress) -> Unit = {}, downLoadSuccess: (String) -> Unit, downLoadError: (Throwable) -> Unit = {}) {
+        scope.launch(Dispatchers.IO) {
+            if (checkedAndroid_Q()) {
+                //android 10 以上
+                val factory = Android10DownloadFactory(appContext, "${System.currentTimeMillis()}.apk")
+                RxHttp.get(NetUrl.DOWNLOAD_URL)
+                    .toFlow(factory) {
+                        downLoadData.invoke(it)
+                    }.catch {
+                        //异常回调
+                        downLoadError(it)
+                    }.collect {
+                        //成功回调
+                        downLoadSuccess.invoke(UriUtils.getFileAbsolutePath(appContext,it)?:"")
+                    }
+            } else {
+                //android 10以下
+                val localPath = appContext.externalCacheDir!!.absolutePath + "/${System.currentTimeMillis()}.apk"
+                RxHttp.get(NetUrl.DOWNLOAD_URL)
+                    .toFlow(localPath) {
+                        downLoadData.invoke(it)
+                    }.catch {
+                        //异常回调
+                        downLoadError(it)
+                    }.collect {
+                        //成功回调
+                        downLoadSuccess.invoke(it)
+                    }
+            }
+        }
+    }
+
+    fun upload(filePath: String, uploadData: (Progress) -> Unit = {}, uploadSuccess: (String) -> Unit, uploadError: (Throwable) -> Unit = {}) {
+        scope.launch(Dispatchers.IO) {
+            if (checkedAndroid_Q() && filePath.startsWith("content:")) {
+                //android 10 以上
+                RxHttp.postForm(NetUrl.UPLOAD_URL)
+                    .addPart(appContext, "apkFile", Uri.parse(filePath))
+                    .toFlow<String> {
+                        //上传进度回调,0-100，仅在进度有更新时才会回调
+                        uploadData.invoke(it)
+                    }.catch {
+                        //异常回调
+                        uploadError.invoke(it)
+                    }.collect {
+                        //成功回调
+                        uploadSuccess.invoke(it)
+                    }
+            } else {
+                // android 10以下
+                val file = File(filePath)
+                if(!file.exists()){
+                    uploadError.invoke(Exception("文件不存在"))
+                    return@launch
+                }
+                RxHttp.postForm(NetUrl.UPLOAD_URL)
+                    .addFile("apkFile", file)
+                    .toFlow<String> {
+                        //上传进度回调,0-100，仅在进度有更新时才会回调
+                        uploadData.invoke(it)
+                    }.catch {
+                        //异常回调
+                        uploadError.invoke(it)
+                    }.collect {
+                        //成功回调
+                        uploadSuccess.invoke(it)
+                    }
+            }
+        }
+    }
+
+    private fun checkedAndroid_Q(): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
     }
 
     /**

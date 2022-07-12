@@ -37,6 +37,7 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
+        android:exported="true"
         android:theme="@android:style/Theme.Translucent.NoTitleBar">
         <!-- android:theme="@android:style/Theme.NoDisplay" -->
         <activity
@@ -45,8 +46,9 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.HOME"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
 
