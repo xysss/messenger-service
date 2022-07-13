@@ -1,6 +1,7 @@
 package com.example.messengerservicedemo
 
 import android.app.Service
+import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
@@ -12,8 +13,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import com.amap.api.location.AMapLocation
-import com.blankj.utilcode.util.ToastUtils
 import com.example.messengerservicedemo.api.NetUrl
+import com.example.messengerservicedemo.broadcast.BootCompleteMyReceiver
 import com.example.messengerservicedemo.ext.*
 import com.example.messengerservicedemo.network.SunnyWeatherNetwork
 import com.example.messengerservicedemo.network.manager.NetState
@@ -29,7 +30,7 @@ import com.example.messengerservicedemo.service.ForegroundNF
 import com.example.messengerservicedemo.util.AmapLocationUtil
 import com.example.messengerservicedemo.util.Android10DownloadFactory
 import com.example.messengerservicedemo.util.UriUtils
-import com.example.model.UserS
+import com.example.model.ComHubData
 import com.serial.port.kit.core.common.TypeConversion
 import com.serial.port.manage.data.WrapReceiverData
 import com.serial.port.manage.listener.OnDataPickListener
@@ -99,6 +100,14 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         mForegroundNF.startForegroundNotification()
 
         scope.launch(Dispatchers.IO) {
+
+//            val localComponentName = ComponentName(
+//                appContext,
+//                BootCompleteMyReceiver::class.java
+//            )
+//            val i: Int = application.packageManager.getComponentEnabledSetting(localComponentName)
+//            getAutostartSettingIntent()
+
             "定位启动".logE(logFlag)
             //获取定位
             initLocationOption()
@@ -119,8 +128,13 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             }
         }
 
-        //注册网络状态监听广播
+        //动态注册网络状态监听广播
         netWorkReceiver = NetworkStateReceive()
+        application.registerReceiver(
+            netWorkReceiver,
+            IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
+        )
+
         val filter = IntentFilter()
         filter.apply {
             addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
@@ -147,6 +161,69 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         }
         return super.onStartCommand(intent, flags, startId)
     }
+
+    /**
+     * 获取自启动管理页面的Intent
+     *
+     * @param context context
+     * @return 返回自启动管理页面的Intent
+     */
+    fun getAutostartSettingIntent(): Intent {
+        var componentName: ComponentName? = null
+        val brand = Build.MANUFACTURER
+        val intent = Intent()
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        when (brand.lowercase(Locale.getDefault())) {
+            "samsung" -> componentName = ComponentName(
+                "com.samsung.android.sm",
+                "com.samsung.android.sm.app.dashboard.SmartManagerDashBoardActivity"
+            )
+            "huawei" -> {
+                Log.e("自启动管理 >>>>", "getAutostartSettingIntent: 华为")
+                componentName = ComponentName(
+                    "com.huawei.systemmanager",
+                    "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"
+                )
+            }
+            "xiaomi" -> //                componentName = new ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity");
+                componentName = ComponentName(
+                    "com.android.settings",
+                    "com.android.settings.BackgroundApplicationsManager"
+                )
+            "vivo" -> //            componentName = new ComponentName("com.iqoo.secure", "com.iqoo.secure.safaguard.PurviewTabActivity");
+                componentName = ComponentName(
+                    "com.iqoo.secure",
+                    "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"
+                )
+            "oppo" -> //            componentName = new ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity");
+                componentName = ComponentName(
+                    "com.coloros.oppoguardelf",
+                    "com.coloros.powermanager.fuelgaue.PowerUsageModelActivity"
+                )
+            "yulong", "360" -> componentName = ComponentName(
+                "com.yulong.android.coolsafe",
+                "com.yulong.android.coolsafe.ui.activity.autorun.AutoRunListActivity"
+            )
+            "meizu" -> componentName =
+                ComponentName("com.meizu.safe", "com.meizu.safe.permission.SmartBGActivity")
+            "oneplus" -> componentName = ComponentName(
+                "com.oneplus.security",
+                "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity"
+            )
+            "letv" -> {
+                intent.action = "com.letv.android.permissionautoboot"
+                intent.action = "android.settings.APPLICATION_DETAILS_SETTINGS"
+                intent.data = Uri.fromParts("package", appContext.getPackageName(), null)
+            }
+            else -> {
+                intent.action = "android.settings.APPLICATION_DETAILS_SETTINGS"
+                intent.data = Uri.fromParts("package", appContext.getPackageName(), null)
+            }
+        }
+        intent.component = componentName
+        return intent
+    }
+
 
     fun downLoad(downLoadData: (Progress) -> Unit = {}, downLoadSuccess: (String) -> Unit, downLoadError: (Throwable) -> Unit = {}) {
         scope.launch(Dispatchers.IO) {
@@ -253,6 +330,9 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
     override fun onDestroy() {
         super.onDestroy()
+
+        application.unregisterReceiver(netWorkReceiver)
+
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
 
         mForegroundNF.stopForegroundNotification()
@@ -433,9 +513,9 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                     WHAT1 -> {
                         //val person = msg.data.getParcelable("person") as Person?
                         //val user = acceptBundle.get("person") as Person
-                        val userS=msg.data?.getSerializable("person")
+                        val comHubData=msg.data?.getSerializable("ComHubData")
                         //val person : Person? = acceptBundle.getParcelable("person")
-                        Log.e("来自client的",userS.toString())
+                        Log.e("来自client的",comHubData.toString())
 
 //                        val user = msg.data.get("user")
 //                        Log.e("来自客户端的",user.toString())
@@ -459,9 +539,9 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     private fun replyToClient(msg: Message) {
         val clientMessenger = msg.replyTo
         val replyMessage = Message.obtain(null, WHAT1)
-        val userS = UserS("小明", age++)
+        val comHubData = ComHubData("小明", age++)
         replyMessage.data = Bundle().apply {
-            putSerializable("person", userS)
+            putSerializable("ComHubData", comHubData)
             //putString("reply", replyText)
         }
         try {

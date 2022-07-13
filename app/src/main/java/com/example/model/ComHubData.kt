@@ -5,7 +5,7 @@ import java.io.Serializable
  * 时间 : 2022-06-08 11:42
  * 描述 : 描述
  */
-data class UserS(
+data class ComHubData(
     val name: String,
     val id: Int
 ) : Serializable

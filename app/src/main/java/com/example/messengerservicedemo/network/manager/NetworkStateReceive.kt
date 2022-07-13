@@ -4,8 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
-import com.example.messengerservicedemo.ext.logFlag
-import me.hgj.mvvmhelper.ext.logE
 
 /**
  * 作者 : xys
@@ -15,6 +13,8 @@ import me.hgj.mvvmhelper.ext.logE
 
 class NetworkStateReceive : BroadcastReceiver() {
     var isInit = true
+    private val ACTION = "android.intent.action.BOOT_COMPLETED"
+
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == ConnectivityManager.CONNECTIVITY_ACTION) {
             if(!isInit){
