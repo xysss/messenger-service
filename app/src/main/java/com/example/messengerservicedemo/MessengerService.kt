@@ -345,6 +345,10 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         "串口关闭${if (close) "成功" else "失败"}".logE(logFlag)
         // 销毁定位
         amapLocationUtil?.let { it.destroyLocation() }
+
+        //销毁重启service
+        val intent = Intent(this,MessengerService::class.java)
+        startService(intent)
     }
 
     private fun initLocationOption() {
