@@ -126,19 +126,19 @@ class ProtocolAnalysis {
                 //设备信息
                 ByteUtils.Msg03 -> {
                     scope.launch(Dispatchers.IO) {
-                        dealMsg03(it)
+                        //dealMsg03(it)
                     }
                 }
                 //传感器信息读取请求
                 ByteUtils.Msg88 -> {
                     scope.launch(Dispatchers.IO) {
-                        dealMsg88(it)
+                        //dealMsg88(it)
                     }
                 }
 
                 ByteUtils.Msg84 -> {
                     scope.launch(Dispatchers.IO) {
-                        dealMsg84(it)
+                        //dealMsg84(it)
                     }
                 }
 

@@ -55,6 +55,16 @@ object SerialCommandProtocol : BaseProtocol() {
         0x00.toByte()
     )
 
+    private var getWeatherTopByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x35.toByte(),
+        0x00.toByte(),
+        0x05.toByte(),
+        0x00.toByte(),
+        0x2C.toByte()
+    )
+
     /**
      * 升级指令
      */
@@ -112,9 +122,9 @@ object SerialCommandProtocol : BaseProtocol() {
     }
 
     fun putWeatherData(byteArray: ByteArray): ByteArray {
-        return byteArray + Crc8.cal_crc8_t(
-            byteArray,
-            byteArray.size
+        return this.getWeatherTopByte + byteArray + Crc8.cal_crc8_t(
+            this.getWeatherTopByte+byteArray,
+            this.getWeatherTopByte.size+byteArray.size
         ) + ByteUtils.FRAME_END
     }
 

@@ -14,13 +14,22 @@ class RealtimeResponse(val status: String, val result: Result) {
 
     class Realtime(val skycon: String, val temperature: Float, val humidity :Float,val cloudrate :Float, val visibility:Float,
                    @SerializedName("air_quality") val airQuality: AirQuality,
-                   @SerializedName("wind") val wind: Wind
+                   @SerializedName("wind") val wind: Wind,
+                   @SerializedName("precipitation") val precipitation: Precipitation,
     )
 
-    class AirQuality(val aqi: AQI, val pm25 :Float)
+
+
+    class AirQuality(val aqi: AQI, val pm25 :Float,val pm10 :Float)
 
     class Wind(val speed: Float,val direction :Float)
 
     class AQI(val chn: Float)
+
+    class Nearest()
+
+    class Local(val intensity :Float)
+
+    class Precipitation( @SerializedName("local") val local: Local, @SerializedName("nearest") val nearest: Nearest)
 
 }

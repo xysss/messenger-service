@@ -11,6 +11,7 @@ import com.serial.port.manage.SerialPortManager
 import com.serial.port.manage.data.WrapReceiverData
 import com.serial.port.manage.data.WrapSendData
 import com.serial.port.manage.listener.OnDataReceiverListener
+import com.swallowsonny.convertextlibrary.toHexString
 import me.hgj.mvvmhelper.ext.logE
 
 /**
@@ -89,6 +90,8 @@ object SerialPortHelper {
 
     fun sendWeatherData(bytes: ByteArray) {
         val sends: ByteArray = SerialCommandProtocol.putWeatherData(bytes)
+
+        "发送天气数据：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {

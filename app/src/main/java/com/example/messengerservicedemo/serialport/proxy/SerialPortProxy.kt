@@ -31,7 +31,7 @@ class SerialPortProxy {
         searchAllDevices()
         serialPortManager = SerialPortKit.newBuilder(appContext)
             // 设备地址
-            .path("/dev/ttyS4")
+            .path("/dev/ttyS1")
             // 波特率
             .baudRate(115200)
             // Byte数组最大接收内存

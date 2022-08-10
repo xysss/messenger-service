@@ -48,6 +48,8 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
+//            Manifest.permission.SYSTEM_ALERT_WINDOW,
+//            Manifest.permission.WRITE_SETTINGS,
             Manifest.permission.READ_EXTERNAL_STORAGE).subscribe { aBoolean ->
             if (aBoolean) {
                 ToastUtils.showShort("权限已经打开")

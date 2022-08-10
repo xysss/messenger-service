@@ -3,7 +3,6 @@ package com.example.messengerservicedemo
 import android.view.Gravity
 import androidx.multidex.MultiDex
 import cat.ereza.customactivityoncrash.config.CaocConfig
-import com.amap.api.location.AMapLocationClient
 import com.effective.android.anchors.Project
 import com.effective.android.anchors.Task
 import com.example.messengerservicedemo.api.NetHttpClient
@@ -102,7 +101,6 @@ class InitComm : Task(TASK_ID, true) {
             .restartActivity(MainActivity::class.java) // 重启的activity
             .errorActivity(MainActivity::class.java) //发生错误跳转的activity
             .apply()
-
     }
 }
 

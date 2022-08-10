@@ -24,10 +24,12 @@ android {
         applicationId "com.example.messengerservicedemo"
         minSdk 21
         targetSdk 31
-        versionCode 1
-        versionName "1.0"
-
+        versionCode 2
+        versionName "1.0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters "armeabi-v7a","x86","armeabi","arm64-v8a"
+        }
     }
     buildFeatures {
         viewBinding true
@@ -171,4 +173,7 @@ dependencies {
     //debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.4'
     //调试数据库
     //debugImplementation 'com.guolindev.glance:glance:1.1.0'
+    //Bugly
+    implementation 'com.tencent.bugly:crashreport_upgrade:latest.release'
+    implementation 'com.tencent.bugly:nativecrashreport:latest.release'
 }

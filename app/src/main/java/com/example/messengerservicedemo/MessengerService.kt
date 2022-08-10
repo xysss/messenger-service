@@ -37,6 +37,7 @@ import com.serial.port.manage.listener.OnDataPickListener
 import com.swallowsonny.convertextlibrary.writeFloatLE
 import com.swallowsonny.convertextlibrary.writeInt16LE
 import com.swallowsonny.convertextlibrary.writeInt8
+import com.tencent.bugly.beta.Beta
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
@@ -99,6 +100,9 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
         mForegroundNF.startForegroundNotification()
 
+        //bugly进入首页检查更新
+        Beta.checkUpgrade(false, true)
+
         scope.launch(Dispatchers.IO) {
 
 //            val localComponentName = ComponentName(
@@ -112,21 +116,24 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             //获取定位
             initLocationOption()
 
-            // 增加统一监听回调
-            SerialPortHelper.portManager.addDataPickListener(onDataPickListener)
             //开始处理串口信息
             protocolAnalysis.startDealMessage()
-
-            // 打开串口
-            if (!SerialPortHelper.portManager.isOpenDevice) {
-                val open = SerialPortHelper.portManager.open()
-                "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
-                //传感器信息读取请求
-                SerialPortHelper.getSensorInfo()
-                //传感器信息数据
-                SerialPortHelper.getSensorData()
-            }
         }
+
+        // 打开串口
+        if (!SerialPortHelper.portManager.isOpenDevice) {
+            val open = SerialPortHelper.portManager.open()
+            "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
+            //传感器信息读取请求
+            SerialPortHelper.getSensorInfo()
+            //传感器信息数据
+            SerialPortHelper.getSensorData()
+        }else{
+            "串口已经打开".logE(logFlag)
+        }
+
+        // 增加统一监听回调
+        SerialPortHelper.portManager.addDataPickListener(onDataPickListener)
 
         //动态注册网络状态监听广播
         netWorkReceiver = NetworkStateReceive()
@@ -142,18 +149,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             addAction(ConnectivityManager.CONNECTIVITY_ACTION)
         }
         registerReceiver(netWorkReceiver, filter)
-
-
-        downLoad({
-            //下载中
-            "下载进度：${it.progress}%".logE(logFlag)
-        }, {
-            //下载完成
-            "下载成功，路径为：${it}".logE(logFlag)
-        }, {
-            //下载失败
-            it.msg.logE(logFlag)
-        })
 
         //网络监听
         NetworkStateManager.instance.mNetworkStateCallback.observe(this){
@@ -311,6 +306,17 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                 //获取定位
                 initLocationOption()
             }
+
+//            downLoad({
+//                //下载中
+//                "下载进度：${it.progress}%".logE(logFlag)
+//            }, {
+//                //下载完成
+//                "下载成功，路径为：${it}".logE(logFlag)
+//            }, {
+//                //下载失败
+//                it.msg.logE(logFlag)
+//            })
         } else {
             //ToastUtils.showShort("网络无连接!")
             "网络无连接!Service".logE(logFlag)
@@ -458,6 +464,9 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val airApiByte = ByteArray(2)
         airApiByte.writeInt16LE(realtime.airQuality.aqi.chn.toInt())
 
+        val ultravioletByte = ByteArray(1)
+        ultravioletByte.writeInt8(lifeIndex.ultraviolet[0].index.toInt())
+
         val maxTempByte = ByteArray(4)
         maxTempByte.writeFloatLE(daily.temperature[0].max)
 
@@ -480,18 +489,18 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         cloudrateByte.writeFloatLE(realtime.cloudrate)
 
         val rainfallByte= ByteArray(4)
-        rainfallByte.writeFloatLE(realtime.cloudrate)
+        rainfallByte.writeFloatLE(realtime.precipitation.local.intensity)
 
-        val unitByte= ByteArray(4)
-        unitByte.writeFloatLE(realtime.cloudrate)
+        val pm25Byte= ByteArray(4)
+        pm25Byte.writeFloatLE(realtime.airQuality.pm25)
 
-        val weatherByteArray=weatherIdByte+airApiByte+maxTempByte+minTempByte+
-                nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+unitByte
+        val pm10Byte= ByteArray(4)
+        pm10Byte.writeFloatLE(realtime.airQuality.pm10)
+
+        val weatherByteArray = weatherIdByte+airApiByte+ultravioletByte+maxTempByte+minTempByte+
+                nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+pm25Byte+pm10Byte
         //发送天气数据
-        //SerialPortHelper.sendWeatherData(weatherByteArray)
-
-
-
+        SerialPortHelper.sendWeatherData(weatherByteArray)
 
     }
     override fun onBind(intent: Intent): IBinder {
