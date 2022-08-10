@@ -82,6 +82,30 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         mForegroundNF = ForegroundNF(this)
         mForegroundNF.startForegroundNotification()
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+
+        weatherHashMap.clear()
+
+        weatherHashMap.put("CLEAR_DAY",0)
+        weatherHashMap.put("CLEAR_NIGHT",1)
+        weatherHashMap.put("PARTLY_CLOUDY_DAY",2)
+        weatherHashMap.put("PARTLY_CLOUDY_NIGHT",3)
+        weatherHashMap.put("CLOUDY",4)
+        weatherHashMap.put("LIGHT_HAZE",5)
+        weatherHashMap.put("MODERATE_HAZE",6)
+        weatherHashMap.put("HEAVY_HAZE",7)
+        weatherHashMap.put("LIGHT_RAIN",8)
+        weatherHashMap.put("MODERATE_RAIN",9)
+        weatherHashMap.put("HEAVY_RAIN",10)
+        weatherHashMap.put("STORM_RAIN",11)
+        weatherHashMap.put("FOG",12)
+        weatherHashMap.put("LIGHT_SNOW",13)
+        weatherHashMap.put("MODERATE_SNOW",14)
+        weatherHashMap.put("HEAVY_SNOW",15)
+        weatherHashMap.put("STORM_SNOW",16)
+        weatherHashMap.put("DUST",17)
+        weatherHashMap.put("SAND",18)
+        weatherHashMap.put("WIND",19)
+
     }
 
     override fun onStart(intent: Intent?, startId: Int) {
@@ -325,7 +349,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
         override fun onSuccess(data: WrapReceiverData) {
-            "统一响应数据：${TypeConversion.bytes2HexString(data.data)}".logE(logFlag)
+            "统一响应数据：${TypeConversion.bytes2HexString(data.data)}".logE("串口")
 
             scope.launch(Dispatchers.IO) {
                 for (byte in data.data)
@@ -421,6 +445,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val realtime = weather.realtime
         val daily = weather.daily
         // 填充now.xml布局中数据
+
+        "天气：${realtime.skycon}".logE(logFlag)
         //温度
         val currentTempText = "${realtime.temperature.toInt()} ℃".logE(logFlag)
         //湿度
@@ -459,43 +485,56 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         //mViewBinding.lifeIndexInclude.carWashingText.text = lifeIndex.carWashing[0].desc
 
         val weatherIdByte = ByteArray(1)
-        weatherIdByte.writeInt8(10)
+        weatherIdByte.writeInt8(weatherHashMap[realtime.skycon]?:0)
+        "天气ID: ${weatherHashMap[realtime.skycon]}".logE(logFlag)
 
         val airApiByte = ByteArray(2)
         airApiByte.writeInt16LE(realtime.airQuality.aqi.chn.toInt())
+        "空气指数: ${realtime.airQuality.aqi.chn.toInt()}".logE(logFlag)
 
         val ultravioletByte = ByteArray(1)
         ultravioletByte.writeInt8(lifeIndex.ultraviolet[0].index.toInt())
+        "紫外线指数: ${lifeIndex.ultraviolet[0].index.toInt()}".logE(logFlag)
 
         val maxTempByte = ByteArray(4)
         maxTempByte.writeFloatLE(daily.temperature[0].max)
+        "最高温度: ${daily.temperature[0].max}".logE(logFlag)
 
         val minTempByte = ByteArray(4)
         minTempByte.writeFloatLE(daily.temperature[0].min)
+        "最低温度: ${daily.temperature[0].min}".logE(logFlag)
 
         val nowTempByte = ByteArray(4)
         nowTempByte.writeFloatLE(realtime.temperature)
+        "当前温度:${realtime.temperature}".logE(logFlag)
 
         val humidityByte= ByteArray(4)
         humidityByte.writeFloatLE(realtime.humidity)
+        "湿度:${realtime.humidity}".logE(logFlag)
 
         val windDirectionByte= ByteArray(4)
         windDirectionByte.writeFloatLE(realtime.wind.direction)
+        "风向: ${realtime.wind.direction}".logE(logFlag)
 
         val windSpeedByte= ByteArray(4)
         windSpeedByte.writeFloatLE(realtime.wind.speed)
+        "风力:${realtime.wind.speed}".logE(logFlag)
 
         val cloudrateByte= ByteArray(4)
         cloudrateByte.writeFloatLE(realtime.cloudrate)
+        "云量:${realtime.cloudrate} ".logE(logFlag)
 
         val rainfallByte= ByteArray(4)
         rainfallByte.writeFloatLE(realtime.precipitation.local.intensity)
+        "降雨量:${realtime.precipitation.local.intensity}".logE(logFlag)
 
         val pm25Byte= ByteArray(4)
         pm25Byte.writeFloatLE(realtime.airQuality.pm25)
+        "pm25:${realtime.airQuality.pm25}".logE(logFlag)
 
         val pm10Byte= ByteArray(4)
         pm10Byte.writeFloatLE(realtime.airQuality.pm10)
+        "pm10:${realtime.airQuality.pm10} }".logE(logFlag)
 
         val weatherByteArray = weatherIdByte+airApiByte+ultravioletByte+maxTempByte+minTempByte+
                 nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+pm25Byte+pm10Byte

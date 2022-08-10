@@ -31,7 +31,7 @@ const val buglyAppId="91953aa13a"
 val recLinkedDeque= LinkedBlockingQueue<Byte>()  //默认情况下，该阻塞队列的大小为Integer.MAX_VALUE，由于这个数值特别大
 val sendLinkedDeque=LinkedBlockingQueue<String>(1000)
 
-
+val weatherHashMap:HashMap<String,Int> = HashMap()
 
 val mmkv: MMKV by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
     MMKV.mmkvWithID(ValueKey.MMKV_APP_KEY)
