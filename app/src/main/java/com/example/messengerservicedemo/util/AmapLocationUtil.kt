@@ -63,7 +63,7 @@ class AmapLocationUtil(private val mContext: Context) {
                 mOption.isGpsFirst = true //可选，设置是否gps优先，只在高精度模式下有效。默认关闭
             }
             mOption.httpTimeOut = 30000 //可选，设置网络请求超时时间。默认为30秒。在仅设备模式下无效
-            mOption.interval = 6*1000*60*60 //可选，设置定位间隔。默认为2秒
+            mOption.interval = 1*1000*60*60 //可选，设置定位间隔。默认为2秒
             mOption.isNeedAddress = true //可选，设置是否返回逆地理地址信息。默认是true
             mOption.isOnceLocation = false //可选，设置是否单次定位。默认是false
             mOption.isOnceLocationLatest =

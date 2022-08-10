@@ -100,7 +100,6 @@ object ByteUtils {
         return temp
     }
 
-
     fun byteArrayToHexString(byteArray: ByteArray): String {
         val sb = StringBuilder()
         for (i in byteArray.indices) {

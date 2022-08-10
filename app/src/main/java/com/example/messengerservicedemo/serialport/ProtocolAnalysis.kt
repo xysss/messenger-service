@@ -1,5 +1,6 @@
 package com.example.messengerservicedemo.serialport
 
+import ZtlApi.ZtlManager
 import com.example.messengerservicedemo.ext.*
 import com.example.messengerservicedemo.serialport.model.SensorData
 import com.example.messengerservicedemo.serialport.model.SensorModel
@@ -7,6 +8,7 @@ import com.example.messengerservicedemo.util.ByteUtils
 import com.example.messengerservicedemo.util.Crc8
 import com.swallowsonny.convertextlibrary.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.hgj.mvvmhelper.ext.logE
 
@@ -44,6 +46,31 @@ class ProtocolAnalysis {
     fun addRecLinkedDeque(byte: Byte) {
         if (!recLinkedDeque.offer(byte)) {
             "recLinkedDeque空间已满".logE("xysLog")
+        }
+    }
+
+    suspend fun reqGpio(){
+        while (true) {
+            try {
+                delay(200)
+                //第一个参数传入GPIO值
+                //第二个参数传入in(输入)或out(输出)
+                val getGpioA3Value = ZtlManager.GetInstance().getGpioValue("GPIO3_A3", "in")  //音量+
+                val getGpioA4Value = ZtlManager.GetInstance().getGpioValue("GPIO3_A4", "in") //音量-
+                if(getGpioA4Value==0){
+                    scope.launch(Dispatchers.Main) {
+                        ZtlManager.GetInstance().setLowerSystemVolume()
+                    }
+                }
+                "GpioA3Value: $getGpioA3Value".logE(logFlag)
+                "GpioA4Value: $getGpioA4Value".logE(logFlag)
+                val systemCurVolume = ZtlManager.GetInstance().systemCurrenVolume
+                "GpioA4Value:系统当前音量：$systemCurVolume".logE(logFlag)
+
+                //ZtlManager.GetInstance().setRaiseSystemVolume()
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
+            }
         }
     }
 

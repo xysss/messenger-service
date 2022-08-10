@@ -1,10 +1,10 @@
 package com.example.messengerservicedemo.broadcast
 
+import ZtlApi.ZtlManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.ContactsContract.Intents.Insert.ACTION
-import com.example.messengerservicedemo.MainActivity
 import com.example.messengerservicedemo.ext.logFlag
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.logE
@@ -17,9 +17,9 @@ class BootCompleteMyReceiver : BroadcastReceiver() {
         //开机启动
         if (ACTION == intent.action) {
             //第一种方式：根据包名
-            val mainIntent = appContext.packageManager.getLaunchIntentForPackage(appContext.packageName)
-            mainIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(mainIntent)
+//            val mainIntent = appContext.packageManager.getLaunchIntentForPackage(appContext.packageName)
+//            mainIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+//            context.startActivity(mainIntent)
             //context.startService(mainIntent)
         }
 

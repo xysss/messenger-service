@@ -1,5 +1,6 @@
 package com.example.messengerservicedemo
 
+import ZtlApi.ZtlManager
 import android.app.Service
 import android.content.ComponentName
 import android.content.Intent
@@ -14,7 +15,6 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import com.amap.api.location.AMapLocation
 import com.example.messengerservicedemo.api.NetUrl
-import com.example.messengerservicedemo.broadcast.BootCompleteMyReceiver
 import com.example.messengerservicedemo.ext.*
 import com.example.messengerservicedemo.network.SunnyWeatherNetwork
 import com.example.messengerservicedemo.network.manager.NetState
@@ -43,7 +43,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.logE
-import me.hgj.mvvmhelper.ext.msg
 import rxhttp.toFlow
 import rxhttp.wrapper.entity.Progress
 import rxhttp.wrapper.param.RxHttp
@@ -106,6 +105,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         weatherHashMap.put("SAND",18)
         weatherHashMap.put("WIND",19)
 
+        ZtlManager.GetInstance().setContext(this)
+
     }
 
     override fun onStart(intent: Intent?, startId: Int) {
@@ -139,9 +140,16 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             "定位启动".logE(logFlag)
             //获取定位
             initLocationOption()
+        }
 
+        scope.launch(Dispatchers.IO) {
             //开始处理串口信息
             protocolAnalysis.startDealMessage()
+        }
+
+        scope.launch(Dispatchers.IO) {
+            //开始轮训gpio值
+            protocolAnalysis.reqGpio()
         }
 
         // 打开串口
@@ -149,9 +157,45 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             val open = SerialPortHelper.portManager.open()
             "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
             //传感器信息读取请求
-            SerialPortHelper.getSensorInfo()
+            //SerialPortHelper.getSensorInfo()
             //传感器信息数据
-            SerialPortHelper.getSensorData()
+            //SerialPortHelper.getSensorData()
+
+
+            val calendar = Calendar.getInstance()
+            val year = calendar[1]
+            val monthOfYear = calendar[2] + 1
+            val dayOfMonth = calendar[5]
+
+            val hour = calendar[11]
+            val minute = calendar[12]
+            val second = calendar[13]
+
+            "发送时间: 系统日期: $year/$monthOfYear/$dayOfMonth 系统时间: $hour/$minute/$second".logE(logFlag)
+
+            //传递时间
+            val yearByte= ByteArray(1)
+            yearByte.writeInt8(year-2000)
+
+            val monthOfYearByte= ByteArray(1)
+            monthOfYearByte.writeInt8(monthOfYear)
+
+            val dayOfMonthByte= ByteArray(1)
+            dayOfMonthByte.writeInt8(dayOfMonth)
+
+            val hourByte= ByteArray(1)
+            hourByte.writeInt8(hour)
+
+            val minuteByte= ByteArray(1)
+            minuteByte.writeInt8(minute)
+
+            val secondByte= ByteArray(1)
+            secondByte.writeInt8(second)
+
+            val timeByteArray = yearByte+monthOfYearByte+dayOfMonthByte+hourByte+minuteByte+secondByte
+
+            SerialPortHelper.sendTime(timeByteArray)
+
         }else{
             "串口已经打开".logE(logFlag)
         }
