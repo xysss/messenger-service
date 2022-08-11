@@ -55,17 +55,23 @@ class ProtocolAnalysis {
                 delay(200)
                 //第一个参数传入GPIO值
                 //第二个参数传入in(输入)或out(输出)
-                val getGpioA3Value = ZtlManager.GetInstance().getGpioValue("GPIO3_A3", "in")  //音量+
-                val getGpioA4Value = ZtlManager.GetInstance().getGpioValue("GPIO3_A4", "in") //音量-
+                val getGpioA5Value = ZtlManager.GetInstance().getGpioValue("GPIO3_A5", "in")  //音量-
+                val getGpioA4Value = ZtlManager.GetInstance().getGpioValue("GPIO3_A4", "in") //音量+
                 if(getGpioA4Value==0){
                     scope.launch(Dispatchers.Main) {
-                        ZtlManager.GetInstance().setLowerSystemVolume()
+                        ZtlManager.GetInstance().setRaiseSystemVolume()
+                        val systemCurVolume = ZtlManager.GetInstance().systemCurrenVolume
+                        "GpioValue:系统当前音量：$systemCurVolume".logE(logFlag)
                     }
                 }
-                "GpioA3Value: $getGpioA3Value".logE(logFlag)
-                "GpioA4Value: $getGpioA4Value".logE(logFlag)
-                val systemCurVolume = ZtlManager.GetInstance().systemCurrenVolume
-                "GpioA4Value:系统当前音量：$systemCurVolume".logE(logFlag)
+                if(getGpioA5Value==0){
+                    scope.launch(Dispatchers.Main) {
+                        ZtlManager.GetInstance().setLowerSystemVolume()
+                        val systemCurVolume = ZtlManager.GetInstance().systemCurrenVolume
+                        "GpioValue:系统当前音量：$systemCurVolume".logE(logFlag)
+                    }
+                }
+
 
                 //ZtlManager.GetInstance().setRaiseSystemVolume()
             } catch (e: InterruptedException) {
