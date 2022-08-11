@@ -114,7 +114,7 @@ class ProtocolAnalysis {
                     newLengthBytes[0] = transcodingBytesList[1]
                     newLengthBytes[1] = transcodingBytesList[2]
                     newLength = newLengthBytes.readInt16BE()
-                    "协议长度: $newLength".logE("xysLog")
+                    "协议长度: $newLength".logE("协议长度")
                 }
 
                 if (transcodingBytesList.size == newLength && transcodingBytesList.size > 9) {

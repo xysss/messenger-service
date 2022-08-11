@@ -55,11 +55,11 @@ class AmapLocationUtil(private val mContext: Context) {
             //如果网络可用就选择高精度
             if (NetworkUtils.isConnected()) {
                 //可选，设置定位模式，可选的模式有高精度、仅设备、仅网络。默认为高精度模式
-                mOption.locationMode = AMapLocationClientOption.AMapLocationMode.Battery_Saving
+                mOption.locationMode = AMapLocationClientOption.AMapLocationMode.Battery_Saving  //网络定位
                 mOption.isGpsFirst = true //可选，设置是否gps优先，只在高精度模式下有效。默认关闭
             } else {
                 mOption.locationMode =
-                    AMapLocationClientOption.AMapLocationMode.Device_Sensors //可选，设置定位模式，可选的模式有高精度、仅设备、仅网络。默认为高精度模式
+                    AMapLocationClientOption.AMapLocationMode.Device_Sensors //gps定位
                 mOption.isGpsFirst = true //可选，设置是否gps优先，只在高精度模式下有效。默认关闭
             }
             mOption.httpTimeOut = 30000 //可选，设置网络请求超时时间。默认为30秒。在仅设备模式下无效
@@ -86,7 +86,7 @@ class AmapLocationUtil(private val mContext: Context) {
                 val district = location.district
                 locationSuccess(longitude, latitude, true, location, district)
                 //定位成功，停止定位：如果实时定位，就把stopLocation()关闭
-                stopLocation()
+                //stopLocation()
             } else {
                 //定位失败
 //                    sb.append("定位失败" + "\n");
