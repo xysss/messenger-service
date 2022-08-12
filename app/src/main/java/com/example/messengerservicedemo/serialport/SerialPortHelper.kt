@@ -88,12 +88,50 @@ object SerialPortHelper {
         printLog(isSuccess, sends)
     }
 
+    fun sendNetState(bytes: ByteArray) {
+        val sends: ByteArray = SerialCommandProtocol.sendNetStateReq(bytes)
+        "发送网络状态!Service：${sends.toHexString()}".logE(logFlag)
+        val isSuccess: Boolean = serialPortManager.send(
+            WrapSendData(sends, 3000, 300, 1),
+            object : OnDataReceiverListener {
+                override fun onSuccess(data: WrapReceiverData) {
+                    val buffer: ByteArray = data.data
+                }
+                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
+                    "onFailed: $msg".logE(logFlag)
+                }
+                override fun onTimeOut() {
+                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                }
+            })
+        printLog(isSuccess, sends)
+    }
+
+    fun setDeviceSensorState(bytes: ByteArray) {
+        val sends: ByteArray = SerialCommandProtocol.setDeviceSensorDataReq(bytes)
+        "!Service：${sends.toHexString()}".logE(logFlag)
+        val isSuccess: Boolean = serialPortManager.send(
+            WrapSendData(sends, 3000, 300, 1),
+            object : OnDataReceiverListener {
+                override fun onSuccess(data: WrapReceiverData) {
+                    val buffer: ByteArray = data.data
+                }
+                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
+                    "onFailed: $msg".logE(logFlag)
+                }
+                override fun onTimeOut() {
+                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                }
+            })
+        printLog(isSuccess, sends)
+    }
+
     fun sendWeatherData(bytes: ByteArray) {
         val sends: ByteArray = SerialCommandProtocol.putWeatherData(bytes)
 
         "发送天气数据：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
-            WrapSendData(sends, 3000, 300, 1),
+            WrapSendData(sends, 3000, 3000, 1),
             object : OnDataReceiverListener {
                 override fun onSuccess(data: WrapReceiverData) {
                     val buffer: ByteArray = data.data
@@ -113,7 +151,7 @@ object SerialPortHelper {
 
         "发送时间：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
-            WrapSendData(sends, 3000, 300, 1),
+            WrapSendData(sends, 3000, 3000, 1),
             object : OnDataReceiverListener {
                 override fun onSuccess(data: WrapReceiverData) {
                     val buffer: ByteArray = data.data

@@ -129,20 +129,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         Beta.checkUpgrade(false, true)
 
         scope.launch(Dispatchers.IO) {
-
-//            val localComponentName = ComponentName(
-//                appContext,
-//                BootCompleteMyReceiver::class.java
-//            )
-//            val i: Int = application.packageManager.getComponentEnabledSetting(localComponentName)
-//            getAutostartSettingIntent()
-
-            "定位启动".logE(logFlag)
-            //获取定位
-            initLocationOption()
-        }
-
-        scope.launch(Dispatchers.IO) {
             //开始处理串口信息
             protocolAnalysis.startDealMessage()
         }
@@ -160,42 +146,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             //SerialPortHelper.getSensorInfo()
             //传感器信息数据
             //SerialPortHelper.getSensorData()
-
-
-            val calendar = Calendar.getInstance()
-            val year = calendar[1]
-            val monthOfYear = calendar[2] + 1
-            val dayOfMonth = calendar[5]
-
-            val hour = calendar[11]
-            val minute = calendar[12]
-            val second = calendar[13]
-
-            "发送时间: 系统日期: $year/$monthOfYear/$dayOfMonth 系统时间: $hour/$minute/$second".logE(logFlag)
-
-            //传递时间
-            val yearByte= ByteArray(1)
-            yearByte.writeInt8(year-2000)
-
-            val monthOfYearByte= ByteArray(1)
-            monthOfYearByte.writeInt8(monthOfYear)
-
-            val dayOfMonthByte= ByteArray(1)
-            dayOfMonthByte.writeInt8(dayOfMonth)
-
-            val hourByte= ByteArray(1)
-            hourByte.writeInt8(hour)
-
-            val minuteByte= ByteArray(1)
-            minuteByte.writeInt8(minute)
-
-            val secondByte= ByteArray(1)
-            secondByte.writeInt8(second)
-
-            val timeByteArray = yearByte+monthOfYearByte+dayOfMonthByte+hourByte+minuteByte+secondByte
-
-            SerialPortHelper.sendTime(timeByteArray)
-
         }else{
             "串口已经打开".logE(logFlag)
         }
@@ -367,13 +317,53 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
      * 示例，在Activity/Fragment中如果想监听网络变化，可重写onNetworkStateChanged该方法
      */
     private fun onNetworkStateChanged(netState: NetState) {
+        val netStateByte = ByteArray(1)
+
         if (netState.isSuccess) {
             //ToastUtils.showShort("终于有网了!")
             "终于有网了!Service".logE(logFlag)
-            if (!mmkv.getBoolean(ValueKey.isFirstInitSuccess,false)){
-                //获取定位
-                initLocationOption()
-            }
+
+            //获取定位
+            initLocationOption()
+            netStateByte.writeInt8(1)
+
+            val calendar = Calendar.getInstance()
+            val year = calendar[1]
+            val monthOfYear = calendar[2] + 1
+            val dayOfMonth = calendar[5]
+
+            val hour = calendar[11]
+            val minute = calendar[12]
+            val second = calendar[13]
+
+            "发送时间: 系统日期: $year/$monthOfYear/$dayOfMonth 系统时间: $hour/$minute/$second".logE(logFlag)
+
+            //传递时间
+            val yearByte= ByteArray(1)
+            yearByte.writeInt8(year-2000)
+
+            val monthOfYearByte= ByteArray(1)
+            monthOfYearByte.writeInt8(monthOfYear)
+
+            val dayOfMonthByte= ByteArray(1)
+            dayOfMonthByte.writeInt8(dayOfMonth)
+
+            val hourByte= ByteArray(1)
+            hourByte.writeInt8(hour)
+
+            val minuteByte= ByteArray(1)
+            minuteByte.writeInt8(minute)
+
+            val secondByte= ByteArray(1)
+            secondByte.writeInt8(second)
+
+            val timeByteArray = yearByte+monthOfYearByte+dayOfMonthByte+hourByte+minuteByte+secondByte
+
+            SerialPortHelper.sendTime(timeByteArray)
+
+//            if (!mmkv.getBoolean(ValueKey.isFirstInitSuccess,false)){
+//
+//            }
 
 //            downLoad({
 //                //下载中
@@ -388,7 +378,15 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         } else {
             //ToastUtils.showShort("网络无连接!")
             "网络无连接!Service".logE(logFlag)
+            netStateByte.writeInt8(0)
         }
+        //发送网络状态
+        SerialPortHelper.sendNetState(netStateByte)
+        val deviceSensorState = ByteArray(1)
+        deviceSensorState.writeInt8(0)  //0 关闭  1 启动
+        //停止主动上报
+        SerialPortHelper.setDeviceSensorState(deviceSensorState)
+        "停止主动上报!Service".logE(logFlag)
     }
 
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
@@ -428,6 +426,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     private fun initLocationOption() {
         if (null == amapLocationUtil) {
             amapLocationUtil = AmapLocationUtil(appContext)
+            "定位启动".logE(logFlag)
         }
         amapLocationUtil?.let {
             it.initLocation()
@@ -525,7 +524,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         //mViewBinding.lifeIndexInclude.coldRiskText.text = lifeIndex.coldRisk[0].desc
         //mViewBinding.lifeIndexInclude.dressingText.text = lifeIndex.dressing[0].desc
         //mViewBinding.tV5One.text = "紫外线指数: ${lifeIndex.ultraviolet[0].index}最大(10)"
-        "紫外线指数: ${lifeIndex.ultraviolet[0].desc}".logE(logFlag)
+        "天级别紫外线指数: ${lifeIndex.ultraviolet[0].index}".logE(logFlag)
         //mViewBinding.lifeIndexInclude.carWashingText.text = lifeIndex.carWashing[0].desc
 
         val weatherIdByte = ByteArray(1)
@@ -537,8 +536,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         "空气指数: ${realtime.airQuality.aqi.chn.toInt()}".logE(logFlag)
 
         val ultravioletByte = ByteArray(1)
-        ultravioletByte.writeInt8(lifeIndex.ultraviolet[0].index.toInt())
-        "紫外线指数: ${lifeIndex.ultraviolet[0].index.toInt()}".logE(logFlag)
+        ultravioletByte.writeInt8(realtime.lifeIndex.ultraviolet.index)
+        "实时紫外线指数: ${realtime.lifeIndex.ultraviolet.index}".logE(logFlag)
 
         val maxTempByte = ByteArray(4)
         maxTempByte.writeFloatLE(daily.temperature[0].max)

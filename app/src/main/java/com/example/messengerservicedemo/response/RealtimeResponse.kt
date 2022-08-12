@@ -16,6 +16,7 @@ class RealtimeResponse(val status: String, val result: Result) {
                    @SerializedName("air_quality") val airQuality: AirQuality,
                    @SerializedName("wind") val wind: Wind,
                    @SerializedName("precipitation") val precipitation: Precipitation,
+                   @SerializedName("life_index") val lifeIndex: LifeIndex
     )
 
 
@@ -28,7 +29,11 @@ class RealtimeResponse(val status: String, val result: Result) {
 
     class Nearest()
 
+    class Ultraviolet(val index :Int,val desc :String)
+
     class Local(val intensity :Float)
+
+    class LifeIndex(@SerializedName("ultraviolet")val ultraviolet :Ultraviolet)
 
     class Precipitation( @SerializedName("local") val local: Local, @SerializedName("nearest") val nearest: Nearest)
 

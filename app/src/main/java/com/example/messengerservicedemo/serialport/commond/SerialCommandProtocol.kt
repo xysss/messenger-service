@@ -45,6 +45,26 @@ object SerialCommandProtocol : BaseProtocol() {
         0x00.toByte()
     )
 
+    private var getNetStateInfoByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x0A.toByte(),
+        0x00.toByte(),
+        0x0C.toByte(),
+        0x00.toByte(),
+        0x01.toByte()
+    )
+
+    private var setDeviceSensorInfoByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x0A.toByte(),
+        0x00.toByte(),
+        0x09.toByte(),
+        0x00.toByte(),
+        0x01.toByte()
+    )
+
     private var getSensorDataByte = byteArrayOf(
         0x55.toByte(),
         0x00.toByte(),
@@ -122,6 +142,20 @@ object SerialCommandProtocol : BaseProtocol() {
             this.getSensorInfoByte,
             this.getSensorInfoByte.size
         ) + ByteUtils.FRAME_END
+    }
+
+    fun sendNetStateReq(byteArray: ByteArray): ByteArray {
+        return this.getNetStateInfoByte+byteArray + Crc8.cal_crc8_t(
+            this.getNetStateInfoByte+byteArray,
+            this.getNetStateInfoByte.size+byteArray.size
+        )+ ByteUtils.FRAME_END
+    }
+
+    fun setDeviceSensorDataReq(byteArray: ByteArray): ByteArray {
+        return this.setDeviceSensorInfoByte+byteArray + Crc8.cal_crc8_t(
+            this.setDeviceSensorInfoByte+byteArray,
+            this.setDeviceSensorInfoByte.size+byteArray.size
+        )+ ByteUtils.FRAME_END
     }
 
     fun getSensorDaraReq(): ByteArray {
