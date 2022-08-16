@@ -6,4 +6,4 @@ package com.example.messengerservicedemo.response
  * 描述 : 描述
  */
 
-class Weather(val realtime: RealtimeResponse.Realtime, val daily: DailyResponse.Daily)
+class Weather(val realtime: RealtimeResponse.Realtime, val daily: DailyResponse.Daily,val alert: RealtimeResponse.Alert)

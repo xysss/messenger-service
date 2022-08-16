@@ -78,11 +78,11 @@ object SerialCommandProtocol : BaseProtocol() {
     private var getWeatherToByte = byteArrayOf(
         0x55.toByte(),
         0x00.toByte(),
-        0x35.toByte(),
+        0x5A.toByte(),
         0x00.toByte(),
         0x05.toByte(),
         0x00.toByte(),
-        0x2C.toByte()
+        0x51.toByte()
     )
 
     private var putTimeToByte = byteArrayOf(

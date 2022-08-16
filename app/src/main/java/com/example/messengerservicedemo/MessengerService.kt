@@ -37,6 +37,7 @@ import com.serial.port.manage.listener.OnDataPickListener
 import com.swallowsonny.convertextlibrary.writeFloatLE
 import com.swallowsonny.convertextlibrary.writeInt16LE
 import com.swallowsonny.convertextlibrary.writeInt8
+import com.swallowsonny.convertextlibrary.writeStringLE
 import com.tencent.bugly.beta.Beta
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
@@ -126,7 +127,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         mForegroundNF.startForegroundNotification()
 
         //bugly进入首页检查更新
-        Beta.checkUpgrade(false, true)
+        //Beta.checkUpgrade(false, true)
 
         scope.launch(Dispatchers.IO) {
             //开始处理串口信息
@@ -470,7 +471,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             val realtimeResponse = deferredRealtime.await()
             val dailyResponse = deferredDaily.await()
             if (realtimeResponse.status == "ok" && dailyResponse.status == "ok") {
-                val weather = Weather(realtimeResponse.result.realtime, dailyResponse.result.daily)
+                val weather = Weather(realtimeResponse.result.realtime, dailyResponse.result.daily,realtimeResponse.result.alert)
                 showWeatherInfo(weather)
                 Result.success(weather)
             } else {
@@ -487,6 +488,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     private fun showWeatherInfo(weather: Weather) {
         val realtime = weather.realtime
         val daily = weather.daily
+        val alert = weather.alert
         // 填充now.xml布局中数据
 
         "天气：${realtime.skycon}".logE(logFlag)
@@ -571,6 +573,10 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         rainfallByte.writeFloatLE(realtime.precipitation.local.intensity)
         "降雨量:${realtime.precipitation.local.intensity}".logE(logFlag)
 
+        val rainProbabilityByte= ByteArray(4)
+        rainProbabilityByte.writeFloatLE(daily.precipitation[0].probability)
+        "降雨概率:${daily.precipitation[0].probability}".logE(logFlag)
+
         val pm25Byte= ByteArray(4)
         pm25Byte.writeFloatLE(realtime.airQuality.pm25)
         "pm25:${realtime.airQuality.pm25}".logE(logFlag)
@@ -579,8 +585,51 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         pm10Byte.writeFloatLE(realtime.airQuality.pm10)
         "pm10:${realtime.airQuality.pm10} }".logE(logFlag)
 
+        val o3Byte= ByteArray(4)
+        o3Byte.writeFloatLE(realtime.airQuality.o3)
+        "o3:${realtime.airQuality.o3} }".logE(logFlag)
+
+        val so2Byte= ByteArray(4)
+        so2Byte.writeFloatLE(realtime.airQuality.so2)
+        "so2:${realtime.airQuality.so2} }".logE(logFlag)
+
+        val no2Byte= ByteArray(4)
+        no2Byte.writeFloatLE(realtime.airQuality.no2)
+        "no2:${realtime.airQuality.no2} }".logE(logFlag)
+
+        val coByte= ByteArray(4)
+        coByte.writeFloatLE(realtime.airQuality.co)
+        "co:${realtime.airQuality.co} }".logE(logFlag)
+
+        val coldRiskByte= ByteArray(1)
+        coldRiskByte.writeFloatLE(daily.lifeIndex.coldRisk[0].index)
+        "感冒指数:${daily.lifeIndex.coldRisk[0].index}".logE(logFlag)
+
+        val dressingByte= ByteArray(1)
+        dressingByte.writeFloatLE(daily.lifeIndex.dressing[0].index)
+        "穿衣指数:${daily.lifeIndex.dressing[0].index}".logE(logFlag)
+
+        val carWashingByte= ByteArray(1)
+        carWashingByte.writeFloatLE(daily.lifeIndex.carWashing[0].index)
+        "洗车指数:${daily.lifeIndex.carWashing[0].index}".logE(logFlag)
+
+
+        val sunriseByte= ByteArray(6)
+        sunriseByte.writeStringLE(daily.astro.sunrise.time+"\\0")
+        "日出时间:${daily.astro.sunrise.time}".logE(logFlag)
+
+        val sunsetByte= ByteArray(6)
+        sunsetByte.writeStringLE(daily.astro.sunset.time+"\\0")
+        "日出时间:${daily.astro.sunset.time}".logE(logFlag)
+
+        val alertCodeByte= ByteArray(2)
+        alertCodeByte.writeInt16LE(alert.content[0].code.toInt())
+        "预警代码:${alert.content[0].code.toInt()}".logE(logFlag)
+
         val weatherByteArray = weatherIdByte+airApiByte+ultravioletByte+maxTempByte+minTempByte+
-                nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+pm25Byte+pm10Byte
+                nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+
+                rainProbabilityByte+pm25Byte+pm10Byte+o3Byte+so2Byte+no2Byte+coByte+coldRiskByte+dressingByte+
+                carWashingByte+sunriseByte+sunsetByte+alertCodeByte
         //发送天气数据
         SerialPortHelper.sendWeatherData(weatherByteArray)
 
