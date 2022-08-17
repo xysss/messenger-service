@@ -13,7 +13,7 @@ class DailyResponse(val status: String, val result: Result) {
 
     class Result(val daily: Daily)
 
-    class Daily(val astro :Astro,val precipitation : List<Precipitation>,val temperature: List<Temperature>, val skycon: List<Skycon>, @SerializedName("life_index") val lifeIndex: LifeIndex)
+    class Daily(val astro :List<Astro>,val precipitation : List<Precipitation>,val temperature: List<Temperature>, val skycon: List<Skycon>, @SerializedName("life_index") val lifeIndex: LifeIndex)
 
     class Astro(val sunrise: Sunrise, val sunset: Sunset)
 
@@ -29,6 +29,6 @@ class DailyResponse(val status: String, val result: Result) {
 
     class LifeIndex(val coldRisk: List<LifeDescription>, val carWashing: List<LifeDescription>, val ultraviolet: List<LifeDescription>, val dressing: List<LifeDescription>)
 
-    class LifeDescription(val desc: String,val index: Float)
+    class LifeDescription(val desc: String,val index: Int)
 
 }

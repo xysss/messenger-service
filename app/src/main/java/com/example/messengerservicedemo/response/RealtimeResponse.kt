@@ -10,7 +10,7 @@ import com.google.gson.annotations.SerializedName
 
 class RealtimeResponse(val status: String, val result: Result) {
 
-    class Result(val realtime: Realtime,val alert :Alert)
+    class Result(val alert :Alert,val realtime: Realtime)
 
     class Realtime(val skycon: String, val temperature: Float, val humidity :Float,val cloudrate :Float, val visibility:Float,
                    @SerializedName("air_quality") val airQuality: AirQuality,

@@ -175,7 +175,7 @@ class ProtocolAnalysis {
                     }
                 }
 
-                else -> it[4].toInt().logE("xysLog")
+                else->{}
             }
         }
     }

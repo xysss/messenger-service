@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.messengerservicedemo.ext.logFlag
 import com.example.messengerservicedemo.serialport.commond.SerialCommandProtocol
 import com.example.messengerservicedemo.serialport.proxy.SerialPortProxy
+import com.example.messengerservicedemo.util.ByteUtils
 import com.serial.port.kit.core.common.TypeConversion
 import com.serial.port.manage.SerialPortManager
 import com.serial.port.manage.data.WrapReceiverData
@@ -13,6 +14,7 @@ import com.serial.port.manage.data.WrapSendData
 import com.serial.port.manage.listener.OnDataReceiverListener
 import com.swallowsonny.convertextlibrary.toHexString
 import me.hgj.mvvmhelper.ext.logE
+import java.util.ArrayList
 
 /**
  * 作者 : xys
@@ -26,6 +28,10 @@ object SerialPortHelper {
 
     private val mHandler = Handler(Looper.getMainLooper())
     private val mProxy = SerialPortProxy()
+
+
+    private val transSendCodingList = ArrayList<Byte>()
+    private lateinit var transSendCodingBytes: ByteArray
 
 
     /**
@@ -109,7 +115,7 @@ object SerialPortHelper {
 
     fun setDeviceSensorState(bytes: ByteArray) {
         val sends: ByteArray = SerialCommandProtocol.setDeviceSensorDataReq(bytes)
-        "!Service：${sends.toHexString()}".logE(logFlag)
+        "停止主动上报!Service：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
@@ -120,16 +126,16 @@ object SerialPortHelper {
                     "onFailed: $msg".logE(logFlag)
                 }
                 override fun onTimeOut() {
-                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                    "停止主动上报 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
                 }
             })
         printLog(isSuccess, sends)
     }
 
     fun sendWeatherData(bytes: ByteArray) {
-        val sends: ByteArray = SerialCommandProtocol.putWeatherData(bytes)
+        val sends: ByteArray = transSendCoding(SerialCommandProtocol.putWeatherData(bytes))
 
-        "发送天气数据：${sends.toHexString()}".logE(logFlag)
+        "发送天气数据：${sends.toHexString()} : ${sends.toHexString(false).length}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 3000, 1),
             object : OnDataReceiverListener {
@@ -140,7 +146,7 @@ object SerialPortHelper {
                     "onFailed: $msg".logE(logFlag)
                 }
                 override fun onTimeOut() {
-                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                    "发送天气数据 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
                 }
             })
         printLog(isSuccess, sends)
@@ -160,7 +166,7 @@ object SerialPortHelper {
                     "onFailed: $msg".logE(logFlag)
                 }
                 override fun onTimeOut() {
-                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                    "发送时间 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
                 }
             })
         printLog(isSuccess, sends)
@@ -216,5 +222,39 @@ object SerialPortHelper {
      */
     private fun runOnUiThread(runnable: Runnable) {
         mHandler.post(runnable)
+    }
+
+    private fun transSendCoding(bytes: ByteArray): ByteArray {
+        bytes.let {
+            var i = 1
+            if (it[0] == ByteUtils.FRAME_START) {
+                transSendCodingList.clear()
+                transSendCodingList.add(it[0])
+            }
+            while (i < it.size) {
+                //校验开头
+                //开始转码
+                when {
+                    it[i] == ByteUtils.FRAME_START -> {
+                        transSendCodingList.add(ByteUtils.FRAME_FF)
+                        transSendCodingList.add(ByteUtils.FRAME_00)
+                    }
+                    it[i] == ByteUtils.FRAME_FF -> {
+                        transSendCodingList.add(ByteUtils.FRAME_FF)
+                        transSendCodingList.add(ByteUtils.FRAME_FF)
+                    }
+                    else -> transSendCodingList.add(it[i])
+                }
+                i++
+            }
+        }
+
+        transSendCodingList.let {
+            transSendCodingBytes = ByteArray(it.size)
+            for (k in transSendCodingBytes.indices) {
+                transSendCodingBytes[k] = it[k]
+            }
+        }
+        return transSendCodingBytes
     }
 }

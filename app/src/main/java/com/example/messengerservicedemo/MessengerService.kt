@@ -34,11 +34,7 @@ import com.example.model.ComHubData
 import com.serial.port.kit.core.common.TypeConversion
 import com.serial.port.manage.data.WrapReceiverData
 import com.serial.port.manage.listener.OnDataPickListener
-import com.swallowsonny.convertextlibrary.writeFloatLE
-import com.swallowsonny.convertextlibrary.writeInt16LE
-import com.swallowsonny.convertextlibrary.writeInt8
-import com.swallowsonny.convertextlibrary.writeStringLE
-import com.tencent.bugly.beta.Beta
+import com.swallowsonny.convertextlibrary.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
@@ -337,8 +333,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             val minute = calendar[12]
             val second = calendar[13]
 
-            "发送时间: 系统日期: $year/$monthOfYear/$dayOfMonth 系统时间: $hour/$minute/$second".logE(logFlag)
-
             //传递时间
             val yearByte= ByteArray(1)
             yearByte.writeInt8(year-2000)
@@ -360,7 +354,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
             val timeByteArray = yearByte+monthOfYearByte+dayOfMonthByte+hourByte+minuteByte+secondByte
 
-            SerialPortHelper.sendTime(timeByteArray)
+            //SerialPortHelper.sendTime(timeByteArray)
 
 //            if (!mmkv.getBoolean(ValueKey.isFirstInitSuccess,false)){
 //
@@ -382,12 +376,11 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             netStateByte.writeInt8(0)
         }
         //发送网络状态
-        SerialPortHelper.sendNetState(netStateByte)
+        //SerialPortHelper.sendNetState(netStateByte)
         val deviceSensorState = ByteArray(1)
         deviceSensorState.writeInt8(0)  //0 关闭  1 启动
         //停止主动上报
-        SerialPortHelper.setDeviceSensorState(deviceSensorState)
-        "停止主动上报!Service".logE(logFlag)
+        //SerialPortHelper.setDeviceSensorState(deviceSensorState)
     }
 
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
@@ -583,48 +576,61 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
         val pm10Byte= ByteArray(4)
         pm10Byte.writeFloatLE(realtime.airQuality.pm10)
-        "pm10:${realtime.airQuality.pm10} }".logE(logFlag)
+        "pm10:${realtime.airQuality.pm10}".logE(logFlag)
 
         val o3Byte= ByteArray(4)
         o3Byte.writeFloatLE(realtime.airQuality.o3)
-        "o3:${realtime.airQuality.o3} }".logE(logFlag)
+        "o3:${realtime.airQuality.o3}".logE(logFlag)
 
         val so2Byte= ByteArray(4)
         so2Byte.writeFloatLE(realtime.airQuality.so2)
-        "so2:${realtime.airQuality.so2} }".logE(logFlag)
+        "so2:${realtime.airQuality.so2}".logE(logFlag)
 
         val no2Byte= ByteArray(4)
         no2Byte.writeFloatLE(realtime.airQuality.no2)
-        "no2:${realtime.airQuality.no2} }".logE(logFlag)
+        "no2:${realtime.airQuality.no2}".logE(logFlag)
 
         val coByte= ByteArray(4)
         coByte.writeFloatLE(realtime.airQuality.co)
-        "co:${realtime.airQuality.co} }".logE(logFlag)
+        "co:${realtime.airQuality.co}".logE(logFlag)
 
         val coldRiskByte= ByteArray(1)
-        coldRiskByte.writeFloatLE(daily.lifeIndex.coldRisk[0].index)
+        coldRiskByte.writeInt8(daily.lifeIndex.coldRisk[0].index)
         "感冒指数:${daily.lifeIndex.coldRisk[0].index}".logE(logFlag)
 
         val dressingByte= ByteArray(1)
-        dressingByte.writeFloatLE(daily.lifeIndex.dressing[0].index)
+        dressingByte.writeInt8(daily.lifeIndex.dressing[0].index)
         "穿衣指数:${daily.lifeIndex.dressing[0].index}".logE(logFlag)
 
         val carWashingByte= ByteArray(1)
-        carWashingByte.writeFloatLE(daily.lifeIndex.carWashing[0].index)
+        carWashingByte.writeInt8(daily.lifeIndex.carWashing[0].index)
         "洗车指数:${daily.lifeIndex.carWashing[0].index}".logE(logFlag)
 
+        val sunTimeNullByte= ByteArray(1)
+        sunTimeNullByte.writeInt8(0)
+        val alertCodeNullByte= ByteArray(1)
+        alertCodeNullByte.writeInt8(255)
 
-        val sunriseByte= ByteArray(6)
-        sunriseByte.writeStringLE(daily.astro.sunrise.time+"\\0")
-        "日出时间:${daily.astro.sunrise.time}".logE(logFlag)
+        val sunriseByte: ByteArray = (daily.astro[0].sunrise.time).toByteArray(charset("UTF-8"))+sunTimeNullByte
 
-        val sunsetByte= ByteArray(6)
-        sunsetByte.writeStringLE(daily.astro.sunset.time+"\\0")
-        "日出时间:${daily.astro.sunset.time}".logE(logFlag)
+//        val sunriseByte= ByteArray(6)
+//        sunriseByte.writeStringLE(daily.astro[0].sunrise.time+"0")
+        "日出时间:${daily.astro[0].sunrise.time}".logE(logFlag)
 
-        val alertCodeByte= ByteArray(2)
-        alertCodeByte.writeInt16LE(alert.content[0].code.toInt())
-        "预警代码:${alert.content[0].code.toInt()}".logE(logFlag)
+        val sunsetByte: ByteArray = (daily.astro[0].sunset.time).toByteArray(charset("UTF-8"))+sunTimeNullByte
+
+//        val sunsetByte= ByteArray(6)
+//        sunsetByte.writeStringLE(daily.astro[0].sunset.time+"0")
+        "日出时间:${daily.astro[0].sunset.time}".logE(logFlag)
+
+        var alertCodeByte= ByteArray(2)
+        if(alert.content.isEmpty()){
+            alertCodeByte=alertCodeNullByte+alertCodeNullByte
+            "预警代码:${alertCodeByte.toHexString()}".logE(logFlag)
+        }else{
+            alertCodeByte.writeInt16LE(alert.content[0].code.toInt())
+            "预警代码:${alert.content[0].code.toInt()}".logE(logFlag)
+        }
 
         val weatherByteArray = weatherIdByte+airApiByte+ultravioletByte+maxTempByte+minTempByte+
                 nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+
