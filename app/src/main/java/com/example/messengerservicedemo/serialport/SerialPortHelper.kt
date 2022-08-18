@@ -107,7 +107,7 @@ object SerialPortHelper {
                     "onFailed: $msg".logE(logFlag)
                 }
                 override fun onTimeOut() {
-                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                    "发送网络状态onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
                 }
             })
         printLog(isSuccess, sends)

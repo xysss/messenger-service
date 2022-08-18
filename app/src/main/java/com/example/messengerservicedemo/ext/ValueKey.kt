@@ -14,4 +14,5 @@ object ValueKey {
     const val deviceSoftwareVersion = "deviceSoftwareVersion"
     const val deviceId = "deviceId"
     const val isFirstInitSuccess = "isFirstInitSuccess"
+    const val isNetworking = "isNetworking"
 }

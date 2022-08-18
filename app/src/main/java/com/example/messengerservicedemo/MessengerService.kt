@@ -317,7 +317,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val netStateByte = ByteArray(1)
 
         if (netState.isSuccess) {
-            //ToastUtils.showShort("终于有网了!")
+            mmkv.putBoolean(ValueKey.isNetworking,true)
             "终于有网了!Service".logE(logFlag)
 
             //获取定位
@@ -371,7 +371,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 //                it.msg.logE(logFlag)
 //            })
         } else {
-            //ToastUtils.showShort("网络无连接!")
+            mmkv.putBoolean(ValueKey.isNetworking,false)
             "网络无连接!Service".logE(logFlag)
             netStateByte.writeInt8(0)
         }
@@ -380,7 +380,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val deviceSensorState = ByteArray(1)
         deviceSensorState.writeInt8(0)  //0 关闭  1 启动
         //停止主动上报
-        SerialPortHelper.setDeviceSensorState(deviceSensorState)
+        //SerialPortHelper.setDeviceSensorState(deviceSensorState)
     }
 
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
@@ -413,14 +413,16 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         amapLocationUtil?.let { it.destroyLocation() }
 
         //销毁重启service
-        val intent = Intent(this,MessengerService::class.java)
-        startService(intent)
+//        val intent = Intent(this,MessengerService::class.java)
+//        startService(intent)
     }
 
     private fun initLocationOption() {
         if (null == amapLocationUtil) {
             amapLocationUtil = AmapLocationUtil(appContext)
-            "定位启动".logE(logFlag)
+        }else{
+            amapLocationUtil=null
+            amapLocationUtil = AmapLocationUtil(appContext)
         }
         amapLocationUtil?.let {
             it.initLocation()
@@ -703,6 +705,12 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
     override fun onDataReceive(sensorData: SensorData) {
 
+    }
+
+    override fun initLocation() {
+        if (mmkv.getBoolean(ValueKey.isNetworking,false)){
+            initLocationOption()
+        }
     }
 
     override fun getLifecycle(): Lifecycle {

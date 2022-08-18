@@ -157,9 +157,9 @@ class ProtocolAnalysis {
         mBytes?.let {
             when (it[4]) {
                 //设备信息
-                ByteUtils.Msg03 -> {
+                ByteUtils.MsgC0 -> {
                     scope.launch(Dispatchers.IO) {
-                        //dealMsg03(it)
+                        dealMsgC0(it)
                     }
                 }
                 //传感器信息读取请求
@@ -180,7 +180,7 @@ class ProtocolAnalysis {
         }
     }
 
-    private fun dealMsg03(mBytes: ByteArray) {
+    private fun dealMsgC0(mBytes: ByteArray) {
         mBytes.let {
             if (it.size == 33) {
                 //版本号
@@ -199,6 +199,9 @@ class ProtocolAnalysis {
                 val tempBytes: ByteArray = it.readByteArrayBE(11, i - 11)
                 mmkv.putString(ValueKey.deviceId, String(tempBytes))
                 "设备信息响应成功: ${String(tempBytes)}".logE("xysLog")
+
+                recall.initLocation()
+
             }
         }
     }
@@ -294,5 +297,6 @@ class ProtocolAnalysis {
 
     interface ReceiveDataCallBack {
         fun onDataReceive(sensorData: SensorData)
+        fun initLocation()
     }
 }
