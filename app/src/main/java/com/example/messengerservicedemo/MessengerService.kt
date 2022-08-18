@@ -354,7 +354,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
             val timeByteArray = yearByte+monthOfYearByte+dayOfMonthByte+hourByte+minuteByte+secondByte
 
-            //SerialPortHelper.sendTime(timeByteArray)
+            SerialPortHelper.sendTime(timeByteArray)
 
 //            if (!mmkv.getBoolean(ValueKey.isFirstInitSuccess,false)){
 //
@@ -376,11 +376,11 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             netStateByte.writeInt8(0)
         }
         //发送网络状态
-        //SerialPortHelper.sendNetState(netStateByte)
+        SerialPortHelper.sendNetState(netStateByte)
         val deviceSensorState = ByteArray(1)
         deviceSensorState.writeInt8(0)  //0 关闭  1 启动
         //停止主动上报
-        //SerialPortHelper.setDeviceSensorState(deviceSensorState)
+        SerialPortHelper.setDeviceSensorState(deviceSensorState)
     }
 
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
