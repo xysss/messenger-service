@@ -44,9 +44,12 @@ import rxhttp.toFlow
 import rxhttp.wrapper.entity.Progress
 import rxhttp.wrapper.param.RxHttp
 import java.io.File
+import java.io.InputStream
 import java.lang.ref.WeakReference
+import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.experimental.and
 
 
 /**
@@ -235,7 +238,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     }
 
 
-    fun downLoad(downLoadData: (Progress) -> Unit = {}, downLoadSuccess: (String) -> Unit, downLoadError: (Throwable) -> Unit = {}) {
+    private fun downLoad(downLoadData: (Progress) -> Unit = {}, downLoadSuccess: (String) -> Unit, downLoadError: (Throwable) -> Unit = {}) {
         scope.launch(Dispatchers.IO) {
             if (checkedAndroid_Q()) {
                 //android 10 以上
@@ -328,48 +331,29 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             val year = calendar[1]
             val monthOfYear = calendar[2] + 1
             val dayOfMonth = calendar[5]
-
             val hour = calendar[11]
             val minute = calendar[12]
             val second = calendar[13]
-
             //传递时间
             val yearByte= ByteArray(1)
             yearByte.writeInt8(year-2000)
-
             val monthOfYearByte= ByteArray(1)
             monthOfYearByte.writeInt8(monthOfYear)
-
             val dayOfMonthByte= ByteArray(1)
             dayOfMonthByte.writeInt8(dayOfMonth)
-
             val hourByte= ByteArray(1)
             hourByte.writeInt8(hour)
-
             val minuteByte= ByteArray(1)
             minuteByte.writeInt8(minute)
-
             val secondByte= ByteArray(1)
             secondByte.writeInt8(second)
-
             val timeByteArray = yearByte+monthOfYearByte+dayOfMonthByte+hourByte+minuteByte+secondByte
-
             SerialPortHelper.sendTime(timeByteArray)
 
-//            if (!mmkv.getBoolean(ValueKey.isFirstInitSuccess,false)){
-//
-//            }
+            scope.launch(Dispatchers.IO) {
+                sendUpdate()
+            }
 
-//            downLoad({
-//                //下载中
-//                "下载进度：${it.progress}%".logE(logFlag)
-//            }, {
-//                //下载完成
-//                "下载成功，路径为：${it}".logE(logFlag)
-//            }, {
-//                //下载失败
-//                it.msg.logE(logFlag)
-//            })
         } else {
             mmkv.putBoolean(ValueKey.isNetworking,false)
             "网络无连接!Service".logE(logFlag)
@@ -383,10 +367,104 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         //SerialPortHelper.setDeviceSensorState(deviceSensorState)
     }
 
+    private suspend fun sendUpdate(){
+//        downLoad({
+//            //下载中
+//            "下载进度：${it.progress}%".logE(logFlag)
+//        }, {
+//            //下载完成
+//            "下载成功，路径为：${it}".logE(logFlag)
+//        }, {
+//            //下载失败
+//            it.msg.logE(logFlag)
+//        })
+
+        val fileName = appContext.getExternalFilesDir("apk/stb.bin").toString()
+        val myFile = File(fileName)
+        val ins: InputStream = myFile.inputStream()
+        val packageByte = ins.readBytes()
+        "localPath: $fileName,content ${packageByte.toString(Charset.defaultCharset())}".logE(logFlag)
+
+        val softwareVersion= ByteArray(1)
+        softwareVersion.writeInt8(0)
+        val hardwareVersion= ByteArray(1)
+        hardwareVersion.writeInt8(0)
+        val fwLength= ByteArray(4)
+        fwLength.writeInt32LE(packageByte.size.toLong())
+        val beginSize=softwareVersion + hardwareVersion + fwLength
+
+        SerialPortHelper.sendBeginUpdate(beginSize)
+
+        sendUpdateFile(packageByte)
+    }
+
+    private suspend fun sendUpdateFile(byteArray: ByteArray){
+        var checkSum=0L
+        var mResultList=ByteArray(518)
+
+        "checkSum16: ${byteArray.toHexString()}".logE(logFlag)
+        for (k in byteArray.indices){
+            checkSum+=byteArray[k].toLong()
+            "checkSum: $checkSum ,10进制: ${(byteArray[k] and 0xff.toByte()).toLong()} ,16进制:${byteArray[k].toLong()}".logE(logFlag)
+        }
+        if (byteArray.size>512){
+            var offsetIndex=0
+            val mList=ByteArray(512)
+            var j=0
+            for (i in byteArray.indices){
+                mList[j]=byteArray[i]
+                j++
+                if (i!=0 && i%511==0){
+                    val offSetByteArray= ByteArray(4)
+                    if (i==511){
+                        offSetByteArray.writeInt32LE(0.toLong())
+                    }else{
+                        offSetByteArray.writeInt32LE((((i/511)-1)*512).toLong())
+                    }
+
+                    val dataLength= ByteArray(2)
+                    dataLength.writeInt16LE(512)
+                    mResultList=offSetByteArray+dataLength+mList
+
+                    SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
+                    "update分包： 总长度: ${byteArray.size} 发送进度： $i  长度：: ${mResultList.toHexString()}}".logE(logFlag)
+                    j=0
+                    offsetIndex=i+1
+                    delay(100)
+                }
+            }
+            if (mList.isNotEmpty()){
+                val mLastList=ByteArray(j)
+                System.arraycopy(mList,0,mLastList,0,mLastList.size)
+                val offSetByteArray= ByteArray(4)
+                offSetByteArray.writeInt32LE((offsetIndex).toLong())
+                val dataLength= ByteArray(2)
+                dataLength.writeInt16LE(j-1)
+                mResultList=offSetByteArray+dataLength+mLastList
+
+                SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
+                "update last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
+            }
+        }else{
+            val offSetByteArray= ByteArray(4)
+            offSetByteArray.writeInt32LE(0.toLong())
+            val dataLength= ByteArray(2)
+            dataLength.writeInt16LE(byteArray.size)
+            mResultList=offSetByteArray+dataLength+byteArray
+
+            SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
+            "update不足512： last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
+        }
+
+        val checkSumByte= ByteArray(4)
+        checkSumByte.writeInt32LE(checkSum.toLong())
+
+        SerialPortHelper.sendEndUpdate(checkSumByte)
+    }
+
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
         override fun onSuccess(data: WrapReceiverData) {
             "统一响应数据：${TypeConversion.bytes2HexString(data.data)}".logE("串口")
-
             scope.launch(Dispatchers.IO) {
                 for (byte in data.data)
                     protocolAnalysis.addRecLinkedDeque(byte)
@@ -396,11 +474,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
     override fun onDestroy() {
         super.onDestroy()
-
         application.unregisterReceiver(netWorkReceiver)
-
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-
         mForegroundNF.stopForegroundNotification()
         //取消协程
         job.cancel()

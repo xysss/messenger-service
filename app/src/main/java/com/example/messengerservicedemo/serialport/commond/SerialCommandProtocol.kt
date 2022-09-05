@@ -65,6 +65,26 @@ object SerialCommandProtocol : BaseProtocol() {
         0x01.toByte()
     )
 
+    private var beginUpdateByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x0F.toByte(),
+        0x00.toByte(),
+        0x01.toByte(),
+        0x00.toByte(),
+        0x06.toByte()
+    )
+
+    private var endUpdateByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x0D.toByte(),
+        0x00.toByte(),
+        0x03.toByte(),
+        0x00.toByte(),
+        0x04.toByte()
+    )
+
     private var getSensorDataByte = byteArrayOf(
         0x55.toByte(),
         0x00.toByte(),
@@ -155,6 +175,24 @@ object SerialCommandProtocol : BaseProtocol() {
         return this.setDeviceSensorInfoByte+byteArray + Crc8.cal_crc8_t(
             this.setDeviceSensorInfoByte+byteArray,
             this.setDeviceSensorInfoByte.size+byteArray.size
+        )+ ByteUtils.FRAME_END
+    }
+
+    fun sendBeginUpdateReq(byteArray: ByteArray): ByteArray {
+        return this.beginUpdateByte+byteArray + Crc8.cal_crc8_t(
+            this.beginUpdateByte+byteArray,
+            this.beginUpdateByte.size+byteArray.size
+        )+ ByteUtils.FRAME_END
+    }
+
+    fun sendUpdateReq(byteArray: ByteArray): ByteArray {
+        return byteArray + Crc8.cal_crc8_t(byteArray, byteArray.size)+ ByteUtils.FRAME_END
+    }
+
+    fun sendEndUpdateReq(byteArray: ByteArray): ByteArray {
+        return this.endUpdateByte+byteArray + Crc8.cal_crc8_t(
+            this.endUpdateByte+byteArray,
+            this.endUpdateByte.size+byteArray.size
         )+ ByteUtils.FRAME_END
     }
 

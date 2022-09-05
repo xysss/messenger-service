@@ -13,8 +13,11 @@ import com.serial.port.manage.data.WrapReceiverData
 import com.serial.port.manage.data.WrapSendData
 import com.serial.port.manage.listener.OnDataReceiverListener
 import com.swallowsonny.convertextlibrary.toHexString
+import com.swallowsonny.convertextlibrary.writeInt16LE
 import me.hgj.mvvmhelper.ext.logE
+import okhttp3.internal.toHexString
 import java.util.ArrayList
+import kotlin.experimental.and
 
 /**
  * 作者 : xys
@@ -59,7 +62,7 @@ object SerialPortHelper {
      * @param listener 监听回调
      */
     fun readVersion() {
-        val sends: ByteArray = SerialCommandProtocol.onCmdReadVersionStatus()
+        val sends: ByteArray = transSendCoding(SerialCommandProtocol.onCmdReadVersionStatus())
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
@@ -77,7 +80,7 @@ object SerialPortHelper {
     }
 
     fun getSensorInfo() {
-        val sends: ByteArray = SerialCommandProtocol.getSensorInfoReq()
+        val sends: ByteArray =transSendCoding(SerialCommandProtocol.getSensorInfoReq())
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
@@ -95,7 +98,7 @@ object SerialPortHelper {
     }
 
     fun sendNetState(bytes: ByteArray) {
-        val sends: ByteArray = SerialCommandProtocol.sendNetStateReq(bytes)
+        val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendNetStateReq(bytes))
         "发送网络状态!Service：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
@@ -114,7 +117,7 @@ object SerialPortHelper {
     }
 
     fun setDeviceSensorState(bytes: ByteArray) {
-        val sends: ByteArray = SerialCommandProtocol.setDeviceSensorDataReq(bytes)
+        val sends: ByteArray =transSendCoding(SerialCommandProtocol.setDeviceSensorDataReq(bytes))
         "停止主动上报!Service：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
@@ -127,6 +130,78 @@ object SerialPortHelper {
                 }
                 override fun onTimeOut() {
                     "停止主动上报 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                }
+            })
+        printLog(isSuccess, sends)
+    }
+
+    fun sendBeginUpdate(bytes: ByteArray) {
+        val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendBeginUpdateReq(bytes))
+        "开始固件更新请求 Service：${sends.toHexString()}".logE(logFlag)
+        val isSuccess: Boolean = serialPortManager.send(
+            WrapSendData(sends, 3000, 300, 1),
+            object : OnDataReceiverListener {
+                override fun onSuccess(data: WrapReceiverData) {
+                    val buffer: ByteArray = data.data
+                }
+                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
+                    "onFailed: $msg".logE(logFlag)
+                }
+                override fun onTimeOut() {
+                    "开始固件更新请求 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                }
+            })
+        printLog(isSuccess, sends)
+    }
+
+    fun sendUpdate(bytes: ByteArray,allLength: Int,dataLength: Int) {
+        val allLengthByte= ByteArray(2)
+        allLengthByte.writeInt16LE(allLength)
+
+        val dataLengthByte= ByteArray(2)
+        dataLengthByte.writeInt16LE(dataLength)
+
+        val updateHeadByte=ByteArray(7)
+        updateHeadByte[0]=0x55.toByte()
+        updateHeadByte[1]=allLengthByte[1]
+        updateHeadByte[2]=allLengthByte[0]
+        updateHeadByte[3]=0x00.toByte()
+        updateHeadByte[4]=0x02.toByte()
+        updateHeadByte[5]=dataLengthByte[1]
+        updateHeadByte[6]=dataLengthByte[0]
+
+        val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendUpdateReq(updateHeadByte+bytes))
+        "分包固件更新请求 Service：${sends.toHexString()}".logE(logFlag)
+        val isSuccess: Boolean = serialPortManager.send(
+            WrapSendData(sends, 3000, 300, 1),
+            object : OnDataReceiverListener {
+                override fun onSuccess(data: WrapReceiverData) {
+                    val buffer: ByteArray = data.data
+                }
+                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
+                    "onFailed: $msg".logE(logFlag)
+                }
+                override fun onTimeOut() {
+                    "分包固件更新请求 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                }
+            })
+        printLog(isSuccess, sends)
+    }
+
+    fun sendEndUpdate(bytes: ByteArray) {
+        val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendEndUpdateReq(bytes))
+        "结束固件更新请求 Service：${sends.toHexString()}".logE(logFlag)
+        val isSuccess: Boolean = serialPortManager.send(
+            WrapSendData(sends, 3000, 300, 1),
+            object : OnDataReceiverListener {
+                override fun onSuccess(data: WrapReceiverData) {
+                    val buffer: ByteArray = data.data
+                }
+                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
+                    "onFailed: $msg".logE(logFlag)
+                }
+                override fun onTimeOut() {
+                    "结束固件更新请求 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
                 }
             })
         printLog(isSuccess, sends)
@@ -153,7 +228,7 @@ object SerialPortHelper {
     }
 
     fun sendTime(bytes: ByteArray) {
-        val sends: ByteArray = SerialCommandProtocol.putTime(bytes)
+        val sends: ByteArray = transSendCoding(SerialCommandProtocol.putTime(bytes))
 
         "发送时间：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
@@ -173,7 +248,7 @@ object SerialPortHelper {
     }
 
     fun getSensorData() {
-        val sends: ByteArray = SerialCommandProtocol.getSensorDaraReq()
+        val sends: ByteArray = transSendCoding(SerialCommandProtocol.getSensorDaraReq())
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
