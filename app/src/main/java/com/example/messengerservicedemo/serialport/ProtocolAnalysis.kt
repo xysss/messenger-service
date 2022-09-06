@@ -209,7 +209,9 @@ class ProtocolAnalysis {
         mBytes.let {
             if (it.size == 10) {
                 if (it[7].toInt()==0){
-                    sendNum--
+                    synchronized(this) {
+                        sendNum--
+                    }
                     "发送映像文件请求,成功 sendNum: $sendNum".logE(logFlag)
                 }
                 else if (it[7].toInt()==1){

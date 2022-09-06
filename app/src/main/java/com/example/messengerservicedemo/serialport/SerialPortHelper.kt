@@ -170,7 +170,9 @@ object SerialPortHelper {
         updateHeadByte[5]=dataLengthByte[1]
         updateHeadByte[6]=dataLengthByte[0]
 
-        sendNum++
+        synchronized(this) {
+            sendNum++
+        }
         val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendUpdateReq(updateHeadByte+bytes))
         "分包固件更新请求 sendNum：$sendNum :${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(

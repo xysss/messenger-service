@@ -107,6 +107,10 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
         ZtlManager.GetInstance().setContext(this)
 
+        scope.launch {
+            delay(10000)
+            sendUpdate()
+        }
     }
 
     override fun onStart(intent: Intent?, startId: Int) {
@@ -391,8 +395,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val beginSize=softwareVersion + hardwareVersion + fwLength
 
         SerialPortHelper.sendBeginUpdate(beginSize)
-
         delay(200)
+
         sendUpdateFile(packageByte)
     }
 
@@ -403,25 +407,27 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             val mList=ByteArray(512)
             var j=0
             for (i in byteArray.indices){
-                mList[j]=byteArray[i]
-                j++
-                if (i!=0 && i%511==0){
-                    val offSetByteArray= ByteArray(4)
-                    if (i==511){
-                        offSetByteArray.writeInt32LE(0.toLong())
+                if (i!=0 && i%512==0){
+                    if (i==512){
+                        delay(500)
                     }else{
-                        offSetByteArray.writeInt32LE((((i/511)-1)*512).toLong())
+                        delay(100)
                     }
-
+                    val offSetByteArray= ByteArray(4)
+                    offSetByteArray.writeInt32LE((i-512).toLong())
                     val dataLength= ByteArray(2)
                     dataLength.writeInt16LE(512)
                     mResultList=offSetByteArray+dataLength+mList
-
                     SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
-                    "update分包： 总长度: ${byteArray.size} 发送进度： $i  长度：: ${mResultList.toHexString()}}".logE(logFlag)
+                    //"update分包： 总长度: ${byteArray.size} 发送进度： $i  长度：: ${mResultList.toHexString()}}".logE(logFlag)
                     j=0
-                    offsetIndex=i+1
-                    delay(500)
+                    offsetIndex=i
+
+                    mList[j]=byteArray[i]
+                    j++
+                }else{
+                    mList[j]=byteArray[i]
+                    j++
                 }
             }
             if (mList.isNotEmpty()){
@@ -430,7 +436,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                 val offSetByteArray= ByteArray(4)
                 offSetByteArray.writeInt32LE((offsetIndex).toLong())
                 val dataLength= ByteArray(2)
-                dataLength.writeInt16LE(j-1)
+                dataLength.writeInt16LE(mLastList.size)
                 mResultList=offSetByteArray+dataLength+mLastList
 
                 SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
@@ -446,7 +452,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
             "update不足512： last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
         }
-
 
         var checkSum=0L
         for (k in byteArray.indices){
@@ -712,8 +717,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         //发送天气数据
         SerialPortHelper.sendWeatherData(weatherByteArray)
 
-        delay(5000)
-        sendUpdate()
     }
     override fun onBind(intent: Intent): IBinder {
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)

@@ -27,7 +27,7 @@ var isRecOK=true
 const val logFlag="xysLog"
 const val buglyAppId="91953aa13a"
 
-var sendNum=0
+var sendNum= 0
 
 //val recLinkedDeque=LinkedBlockingDeque<ByteArray>(1000000)
 val recLinkedDeque= LinkedBlockingQueue<Byte>()  //默认情况下，该阻塞队列的大小为Integer.MAX_VALUE，由于这个数值特别大
