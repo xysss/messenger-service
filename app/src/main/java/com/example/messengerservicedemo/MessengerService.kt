@@ -350,10 +350,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             val timeByteArray = yearByte+monthOfYearByte+dayOfMonthByte+hourByte+minuteByte+secondByte
             SerialPortHelper.sendTime(timeByteArray)
 
-            scope.launch(Dispatchers.IO) {
-                sendUpdate()
-            }
-
         } else {
             mmkv.putBoolean(ValueKey.isNetworking,false)
             "网络无连接!Service".logE(logFlag)
@@ -361,10 +357,11 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         }
         //发送网络状态
         SerialPortHelper.sendNetState(netStateByte)
-        val deviceSensorState = ByteArray(1)
-        deviceSensorState.writeInt8(0)  //0 关闭  1 启动
-        //停止主动上报
-        //SerialPortHelper.setDeviceSensorState(deviceSensorState)
+
+//        val deviceSensorState = ByteArray(1)
+//        deviceSensorState.writeInt8(0)  //0 关闭  1 启动
+//        //停止主动上报
+//        SerialPortHelper.setDeviceSensorState(deviceSensorState)
     }
 
     private suspend fun sendUpdate(){
@@ -383,7 +380,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val myFile = File(fileName)
         val ins: InputStream = myFile.inputStream()
         val packageByte = ins.readBytes()
-        "localPath: $fileName,content ${packageByte.toString(Charset.defaultCharset())}".logE(logFlag)
+        "localPath: $fileName".logE(logFlag)
 
         val softwareVersion= ByteArray(1)
         softwareVersion.writeInt8(0)
@@ -395,18 +392,12 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
         SerialPortHelper.sendBeginUpdate(beginSize)
 
+        delay(200)
         sendUpdateFile(packageByte)
     }
 
     private suspend fun sendUpdateFile(byteArray: ByteArray){
-        var checkSum=0L
         var mResultList=ByteArray(518)
-
-        "checkSum16: ${byteArray.toHexString()}".logE(logFlag)
-        for (k in byteArray.indices){
-            checkSum+=byteArray[k].toLong()
-            "checkSum: $checkSum ,10进制: ${(byteArray[k] and 0xff.toByte()).toLong()} ,16进制:${byteArray[k].toLong()}".logE(logFlag)
-        }
         if (byteArray.size>512){
             var offsetIndex=0
             val mList=ByteArray(512)
@@ -430,7 +421,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                     "update分包： 总长度: ${byteArray.size} 发送进度： $i  长度：: ${mResultList.toHexString()}}".logE(logFlag)
                     j=0
                     offsetIndex=i+1
-                    delay(100)
+                    delay(500)
                 }
             }
             if (mList.isNotEmpty()){
@@ -456,9 +447,14 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             "update不足512： last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
         }
 
-        val checkSumByte= ByteArray(4)
-        checkSumByte.writeInt32LE(checkSum.toLong())
 
+        var checkSum=0L
+        for (k in byteArray.indices){
+            checkSum+=byteArray[k].toInt() and 0xff
+        }
+        "checkSum: $checkSum".logE(logFlag)
+        val checkSumByte= ByteArray(4)
+        checkSumByte.writeInt32LE(checkSum)
         SerialPortHelper.sendEndUpdate(checkSumByte)
     }
 
@@ -555,7 +551,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         }
     }
 
-    private fun showWeatherInfo(weather: Weather) {
+    private suspend fun showWeatherInfo(weather: Weather) {
         val realtime = weather.realtime
         val daily = weather.daily
         val alert = weather.alert
@@ -716,6 +712,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         //发送天气数据
         SerialPortHelper.sendWeatherData(weatherByteArray)
 
+        delay(5000)
+        sendUpdate()
     }
     override fun onBind(intent: Intent): IBinder {
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)

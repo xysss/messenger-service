@@ -26,7 +26,6 @@ class ProtocolAnalysis {
     private var newLength = 0
     private var beforeIsFF = false
     private lateinit var recall: ReceiveDataCallBack
-
     private lateinit var senId: String
     private lateinit var senState: String
     private lateinit var sensorValue: String
@@ -116,7 +115,6 @@ class ProtocolAnalysis {
                     newLength = newLengthBytes.readInt16BE()
                     "协议长度: $newLength".logE("协议长度")
                 }
-
                 if (transcodingBytesList.size == newLength && transcodingBytesList.size > 9) {
                     transcodingBytesList.let { arrayList ->
                         afterBytes = ByteArray(arrayList.size)
@@ -124,7 +122,6 @@ class ProtocolAnalysis {
                             afterBytes[k] = arrayList[k]
                         }
                     }
-
                     isRecOK =
                         if (afterBytes[0] == ByteUtils.FRAME_START && afterBytes[afterBytes.size - 1] == ByteUtils.FRAME_END) {
                             //CRC校验
@@ -142,9 +139,7 @@ class ProtocolAnalysis {
                         }
                     transcodingBytesList.clear()
                 } else if (newLength < 9 && transcodingBytesList.size > 9) { //协议长度不够
-                    "解析协议不完整，协议长度: $newLength  解析长度：${transcodingBytesList.size} ,${transcodingBytesList.toHexString()}".logE(
-                        "xysLog"
-                    )
+                    "解析协议不完整，协议长度: $newLength  解析长度：${transcodingBytesList.size} ,${transcodingBytesList.toHexString()}".logE("xysLog")
                     isRecOK = false
                     //BleHelper.retryHistoryMessage(recordCommand,alarmCommand)
                     transcodingBytesList.clear()
@@ -153,7 +148,7 @@ class ProtocolAnalysis {
         }
     }
 
-    private suspend fun analyseMessage(mBytes: ByteArray?) {
+    private fun analyseMessage(mBytes: ByteArray?) {
         mBytes?.let {
             when (it[4]) {
                 //设备信息
@@ -168,10 +163,14 @@ class ProtocolAnalysis {
                         //dealMsg88(it)
                     }
                 }
-
                 ByteUtils.Msg84 -> {
                     scope.launch(Dispatchers.IO) {
                         //dealMsg84(it)
+                    }
+                }
+                ByteUtils.Msg82 -> {
+                    scope.launch(Dispatchers.IO) {
+                        dealMsg82(it)
                     }
                 }
 
@@ -202,6 +201,21 @@ class ProtocolAnalysis {
 
                 recall.initLocation()
 
+            }
+        }
+    }
+
+    private fun dealMsg82(mBytes: ByteArray) {
+        mBytes.let {
+            if (it.size == 10) {
+                if (it[7].toInt()==0){
+                    sendNum--
+                    "发送映像文件请求,成功 sendNum: $sendNum".logE(logFlag)
+                }
+                else if (it[7].toInt()==1){
+                    "发送映像文件请求,失败 sendNum:$sendNum".logE(logFlag)
+                }
+                //recall.initLocation()
             }
         }
     }

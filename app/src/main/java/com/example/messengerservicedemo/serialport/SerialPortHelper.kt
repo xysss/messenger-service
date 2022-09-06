@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.example.messengerservicedemo.ext.logFlag
+import com.example.messengerservicedemo.ext.sendNum
 import com.example.messengerservicedemo.serialport.commond.SerialCommandProtocol
 import com.example.messengerservicedemo.serialport.proxy.SerialPortProxy
 import com.example.messengerservicedemo.util.ByteUtils
@@ -157,7 +158,6 @@ object SerialPortHelper {
     fun sendUpdate(bytes: ByteArray,allLength: Int,dataLength: Int) {
         val allLengthByte= ByteArray(2)
         allLengthByte.writeInt16LE(allLength)
-
         val dataLengthByte= ByteArray(2)
         dataLengthByte.writeInt16LE(dataLength)
 
@@ -170,8 +170,9 @@ object SerialPortHelper {
         updateHeadByte[5]=dataLengthByte[1]
         updateHeadByte[6]=dataLengthByte[0]
 
+        sendNum++
         val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendUpdateReq(updateHeadByte+bytes))
-        "分包固件更新请求 Service：${sends.toHexString()}".logE(logFlag)
+        "分包固件更新请求 sendNum：$sendNum :${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
