@@ -408,7 +408,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             var j=0
             for (i in byteArray.indices){
                 if (i!=0 && i%512==0){
-                    if (i==512){
+                    if (i==1024){
                         delay(500)
                     }else{
                         delay(100)
