@@ -115,15 +115,14 @@ class ProtocolAnalysis {
                     newLength = newLengthBytes.readInt16BE()
                     "协议长度: $newLength".logE("协议长度")
                 }
-                if (transcodingBytesList.size == newLength && transcodingBytesList.size > 9) {
+                if (transcodingBytesList.size == newLength && transcodingBytesList.size >= 9) {
                     transcodingBytesList.let { arrayList ->
                         afterBytes = ByteArray(arrayList.size)
                         for (k in afterBytes.indices) {
                             afterBytes[k] = arrayList[k]
                         }
                     }
-                    isRecOK =
-                        if (afterBytes[0] == ByteUtils.FRAME_START && afterBytes[afterBytes.size - 1] == ByteUtils.FRAME_END) {
+                    isRecOK = if (afterBytes[0] == ByteUtils.FRAME_START && afterBytes[afterBytes.size - 1] == ByteUtils.FRAME_END) {
                             //CRC校验
                             if (Crc8.isFrameValid(afterBytes, afterBytes.size)) {
                                 analyseMessage(afterBytes)  //分发数据
@@ -244,12 +243,15 @@ class ProtocolAnalysis {
     private suspend fun dealMsgC3(mBytes: ByteArray) {
         mBytes.let {
             if (it.size == 9) {
-                val close = SerialPortHelper.portManager.close()
+                "收到C3成功".logE(logFlag)
                 baudRate=921600
+                isNeedNewInit=true
                 val open = SerialPortHelper.portManager.open()
                 "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
-                "确认UI更新固件请求成功".logE(logFlag)
+                isNeedNewInit=false
                 sendUIUpdateFile(uIPackageByte)
+            }else{
+                "收到C3错误".logE(logFlag)
             }
         }
     }
@@ -315,8 +317,11 @@ class ProtocolAnalysis {
                     dataLength.writeInt16LE(512)
                     mResultList=offSetByteArray+dataLength+mList
                     isRec0x01OK=false
-                    SerialPortHelper.sendUIUpdate(mResultList,mResultList.size+9,mResultList.size)
-                    "UI分包： 总长度: ${byteArray.size} 发送进度： $i  长度：: ${mResultList.toHexString()}}".logE(logFlag)
+                    while(true){
+                        SerialPortHelper.sendUIUpdate(mResultList,mResultList.size+9,mResultList.size)
+                        "UI分包： 总长度: ${byteArray.size} 发送进度： $i".logE(logFlag)
+                        delay(2000)
+                    }
                     offsetIndex=i
                     while (!isRec0x01OK){
                         delay(100)
@@ -360,9 +365,11 @@ class ProtocolAnalysis {
         //发送结束
         sendUIUpdateEnd(uIPackageByte)
 
-        val close = SerialPortHelper.portManager.close()
+        isNeedNewInit=true
         baudRate=115200
         val open = SerialPortHelper.portManager.open()
+        isNeedNewInit=false
+        delay(1000)
     }
 
     private fun sendUIUpdateEnd(byteArray: ByteArray){

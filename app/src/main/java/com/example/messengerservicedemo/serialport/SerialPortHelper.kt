@@ -5,7 +5,6 @@ import android.os.Looper
 import android.util.Log
 import com.example.messengerservicedemo.ext.logFlag
 import com.example.messengerservicedemo.ext.sendNum
-import com.example.messengerservicedemo.ext.sendUIUpdateNum
 import com.example.messengerservicedemo.serialport.commond.SerialCommandProtocol
 import com.example.messengerservicedemo.serialport.proxy.SerialPortProxy
 import com.example.messengerservicedemo.util.ByteUtils
@@ -17,9 +16,6 @@ import com.serial.port.manage.listener.OnDataReceiverListener
 import com.swallowsonny.convertextlibrary.toHexString
 import com.swallowsonny.convertextlibrary.writeInt16LE
 import me.hgj.mvvmhelper.ext.logE
-import okhttp3.internal.toHexString
-import java.util.ArrayList
-import kotlin.experimental.and
 
 /**
  * 作者 : xys
@@ -158,7 +154,7 @@ object SerialPortHelper {
 
     fun sendUIReq(bytes: ByteArray) {
         val sends: ByteArray = transSendCoding(SerialCommandProtocol.setUIReq(bytes))
-        "开始UI更新请求 Service：${sends.toHexString()}".logE(logFlag)
+        "开始UI更新请求 ${sends.size}: ${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
@@ -169,13 +165,16 @@ object SerialPortHelper {
                     "onFailed: $msg".logE(logFlag)
                 }
                 override fun onTimeOut() {
-                    "开始固件更新请求 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                    "开始UI更新请求 onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
                 }
             })
         printLog(isSuccess, sends)
     }
 
     fun sendUIUpdate(bytes: ByteArray,allLength: Int,dataLength: Int) {
+//        val byte= ByteArray(100)
+//        System.arraycopy(bytes,0,byte,0,100)
+
         val allLengthByte= ByteArray(2)
         allLengthByte.writeInt16LE(allLength)
         val dataLengthByte= ByteArray(2)
@@ -190,11 +189,8 @@ object SerialPortHelper {
         updateHeadByte[5]=dataLengthByte[1]
         updateHeadByte[6]=dataLengthByte[0]
 
-        synchronized(this) {
-            sendUIUpdateNum++
-        }
         val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendUIUpdateReq(updateHeadByte+bytes))
-        "分包固件更新请求 sendNum：$sendNum :${sends.toHexString()}".logE(logFlag)
+        "分包UI更新请求 转码后长度：${sends.size} ：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {
@@ -287,7 +283,6 @@ object SerialPortHelper {
 
     fun sendWeatherData(bytes: ByteArray) {
         val sends: ByteArray = transSendCoding(SerialCommandProtocol.putWeatherData(bytes))
-
         "发送天气数据：${sends.toHexString()} : ${sends.toHexString(false).length}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 3000, 1),
@@ -378,6 +373,7 @@ object SerialPortHelper {
     }
 
     private fun transSendCoding(bytes: ByteArray): ByteArray {
+        "转码前长度：${bytes.size} ：${bytes.toHexString()}".logE(logFlag)
         bytes.let {
             var i = 1
             if (it[0] == ByteUtils.FRAME_START) {

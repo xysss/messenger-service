@@ -484,7 +484,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
         override fun onSuccess(data: WrapReceiverData) {
-            "统一响应数据：${TypeConversion.bytes2HexString(data.data)}".logE("串口")
+            "统一响应数据：长度： ${data.data.size} :${TypeConversion.bytes2HexString(data.data)}".logE("串口")
             scope.launch(Dispatchers.IO) {
                 for (byte in data.data)
                     protocolAnalysis.addRecLinkedDeque(byte)

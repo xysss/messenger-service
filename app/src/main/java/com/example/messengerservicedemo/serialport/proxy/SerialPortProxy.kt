@@ -3,6 +3,7 @@ package com.example.messengerservicedemo.serialport.proxy
 import android.util.Log
 import com.example.messengerservicedemo.BuildConfig
 import com.example.messengerservicedemo.ext.baudRate
+import com.example.messengerservicedemo.ext.isNeedNewInit
 import com.example.messengerservicedemo.util.DataConvertUtil
 import com.serial.port.kit.core.SerialPortFinder
 import com.serial.port.manage.SerialPortKit
@@ -38,7 +39,7 @@ class SerialPortProxy {
             // Byte数组最大接收内存
             .maxSize(1024)
             // 发送失败重试次数
-            .retryCount(2)
+            .retryCount(1)
             // 发送一次指令，最多接收几次设备发送的数据，局部接收次数优先级高
             .receiveMaxCount(1)
             // 是否按照 maxSize 内存进行接收
@@ -57,8 +58,12 @@ class SerialPortProxy {
     }
 
     private fun reInitSdk() {
-        if (!isInit) {
+        if (isNeedNewInit){
             initSdk()
+        }else{
+            if (!isInit) {
+                initSdk()
+            }
         }
     }
 
