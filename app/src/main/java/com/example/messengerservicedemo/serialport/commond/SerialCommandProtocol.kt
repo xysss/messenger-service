@@ -75,12 +75,32 @@ object SerialCommandProtocol : BaseProtocol() {
         0x06.toByte()
     )
 
+    private var setUIReqByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x0F.toByte(),
+        0x00.toByte(),
+        0x0D.toByte(),
+        0x00.toByte(),
+        0x06.toByte()
+    )
+
     private var endUpdateByte = byteArrayOf(
         0x55.toByte(),
         0x00.toByte(),
         0x0D.toByte(),
         0x00.toByte(),
         0x03.toByte(),
+        0x00.toByte(),
+        0x04.toByte()
+    )
+
+    private var endUpdateUIByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x0D.toByte(),
+        0x00.toByte(),
+        0x0F.toByte(),
         0x00.toByte(),
         0x04.toByte()
     )
@@ -185,7 +205,18 @@ object SerialCommandProtocol : BaseProtocol() {
         )+ ByteUtils.FRAME_END
     }
 
+    fun setUIReq(byteArray: ByteArray): ByteArray {
+        return this.setUIReqByte+byteArray + Crc8.cal_crc8_t(
+            this.setUIReqByte+byteArray,
+            this.setUIReqByte.size+byteArray.size
+        )+ ByteUtils.FRAME_END
+    }
+
     fun sendUpdateReq(byteArray: ByteArray): ByteArray {
+        return byteArray + Crc8.cal_crc8_t(byteArray, byteArray.size)+ ByteUtils.FRAME_END
+    }
+
+    fun sendUIUpdateReq(byteArray: ByteArray): ByteArray {
         return byteArray + Crc8.cal_crc8_t(byteArray, byteArray.size)+ ByteUtils.FRAME_END
     }
 
@@ -193,6 +224,13 @@ object SerialCommandProtocol : BaseProtocol() {
         return this.endUpdateByte+byteArray + Crc8.cal_crc8_t(
             this.endUpdateByte+byteArray,
             this.endUpdateByte.size+byteArray.size
+        )+ ByteUtils.FRAME_END
+    }
+
+    fun sendUIEndUpdateReq(byteArray: ByteArray): ByteArray {
+        return this.endUpdateUIByte+byteArray + Crc8.cal_crc8_t(
+            this.endUpdateUIByte+byteArray,
+            this.endUpdateUIByte.size+byteArray.size
         )+ ByteUtils.FRAME_END
     }
 

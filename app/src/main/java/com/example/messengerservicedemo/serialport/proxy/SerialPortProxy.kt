@@ -2,6 +2,7 @@ package com.example.messengerservicedemo.serialport.proxy
 
 import android.util.Log
 import com.example.messengerservicedemo.BuildConfig
+import com.example.messengerservicedemo.ext.baudRate
 import com.example.messengerservicedemo.util.DataConvertUtil
 import com.serial.port.kit.core.SerialPortFinder
 import com.serial.port.manage.SerialPortKit
@@ -33,7 +34,7 @@ class SerialPortProxy {
             // 设备地址
             .path("/dev/ttyS1")
             // 波特率
-            .baudRate(115200)
+            .baudRate(baudRate)
             // Byte数组最大接收内存
             .maxSize(1024)
             // 发送失败重试次数

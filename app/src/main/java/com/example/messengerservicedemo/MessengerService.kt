@@ -109,7 +109,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
         scope.launch {
             delay(10000)
-            sendUpdate()
+            //sendUpdate()
+            setUIReq()
         }
     }
 
@@ -366,6 +367,24 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 //        deviceSensorState.writeInt8(0)  //0 关闭  1 启动
 //        //停止主动上报
 //        SerialPortHelper.setDeviceSensorState(deviceSensorState)
+    }
+
+    private suspend fun setUIReq(){
+        val fileName = appContext.getExternalFilesDir("apk/jidinghe.tft").toString()
+        val myFile = File(fileName)
+        val ins: InputStream = myFile.inputStream()
+        uIPackageByte = ins.readBytes()
+        "localPath: $fileName".logE(logFlag)
+
+        val softwareVersion= ByteArray(1)
+        softwareVersion.writeInt8(0)
+        val hardwareVersion= ByteArray(1)
+        hardwareVersion.writeInt8(0)
+        val fwLength= ByteArray(4)
+        fwLength.writeInt32LE(uIPackageByte.size.toLong())
+        val beginSize=softwareVersion + hardwareVersion + fwLength
+
+        SerialPortHelper.sendUIReq(beginSize)
     }
 
     private suspend fun sendUpdate(){

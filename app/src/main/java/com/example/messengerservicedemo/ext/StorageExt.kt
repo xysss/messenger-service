@@ -28,6 +28,11 @@ const val logFlag="xysLog"
 const val buglyAppId="91953aa13a"
 
 var sendNum= 0
+var sendUIUpdateNum= 0
+var isRec0x01OK= false
+var isRec0x05OK= false
+var uiRecNum= 0
+var baudRate=115200
 
 //val recLinkedDeque=LinkedBlockingDeque<ByteArray>(1000000)
 val recLinkedDeque= LinkedBlockingQueue<Byte>()  //默认情况下，该阻塞队列的大小为Integer.MAX_VALUE，由于这个数值特别大
@@ -38,6 +43,8 @@ val weatherHashMap:HashMap<String,Int> = HashMap()
 val mmkv: MMKV by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
     MMKV.mmkvWithID(ValueKey.MMKV_APP_KEY)
 }
+
+lateinit var uIPackageByte :ByteArray
 
 fun isMainThread(): Boolean {
     return Looper.getMainLooper().thread.id == Thread.currentThread().id
