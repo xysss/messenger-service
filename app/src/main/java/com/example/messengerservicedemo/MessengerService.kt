@@ -30,6 +30,7 @@ import com.example.messengerservicedemo.serialport.model.SensorData
 import com.example.messengerservicedemo.service.ForegroundNF
 import com.example.messengerservicedemo.util.AmapLocationUtil
 import com.example.messengerservicedemo.util.Android10DownloadFactory
+import com.example.messengerservicedemo.util.FileUtils.deleteDirectoryFiles
 import com.example.messengerservicedemo.util.UriUtils
 import com.example.model.ComHubData
 import com.serial.port.kit.core.common.TypeConversion
@@ -118,6 +119,10 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                     stm32HighVersion=versionInfo.version.split(".")[0].toInt()
                     stm32LowVersion=versionInfo.version.split(".")[1].toInt()
                 }
+                binFileDirectory = appContext.externalCacheDir!!.absolutePath
+                val fileName = binFileDirectory
+                val myFile = File(fileName)
+                deleteDirectoryFiles(myFile)
                 NetUrl.DOWNLOAD_URL= versionInfo.appUrl
                 downLoad({
                     //下载中

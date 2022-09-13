@@ -48,6 +48,7 @@ val mmkv: MMKV by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
 
 lateinit var uIPackageByte :ByteArray
 var binFileUrl:String =""
+var binFileDirectory:String =""
 var stm32HighVersion:Int=0
 var stm32LowVersion:Int=0
 
