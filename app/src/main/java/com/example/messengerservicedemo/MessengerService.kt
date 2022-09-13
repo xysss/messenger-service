@@ -22,6 +22,7 @@ import com.example.messengerservicedemo.network.manager.NetworkStateManager
 import com.example.messengerservicedemo.network.manager.NetworkStateReceive
 import com.example.messengerservicedemo.response.Location
 import com.example.messengerservicedemo.response.Place
+import com.example.messengerservicedemo.response.VersionInfoResponse
 import com.example.messengerservicedemo.response.Weather
 import com.example.messengerservicedemo.serialport.ProtocolAnalysis
 import com.example.messengerservicedemo.serialport.SerialPortHelper
@@ -40,7 +41,10 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.logE
+import me.hgj.mvvmhelper.ext.msg
+import rxhttp.toClass
 import rxhttp.toFlow
+import rxhttp.tryAwait
 import rxhttp.wrapper.entity.Progress
 import rxhttp.wrapper.param.RxHttp
 import java.io.File
@@ -107,10 +111,31 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 
         ZtlManager.GetInstance().setContext(this)
 
-        scope.launch {
-            delay(10000)
-            //sendUpdate()
-            setUIReq()
+        scope.launch(Dispatchers.IO) {
+            val versionInfo = getVersionInfo()
+            if (versionInfo.appUrl.isNotEmpty()){
+                if (versionInfo.version.isNotEmpty()){
+                    stm32HighVersion=versionInfo.version.split(".")[0].toInt()
+                    stm32LowVersion=versionInfo.version.split(".")[1].toInt()
+                }
+                NetUrl.DOWNLOAD_URL= versionInfo.appUrl
+                downLoad({
+                    //下载中
+                    "下载进度：${it.progress}%".logE(logFlag)
+                }, {
+                    //下载完成
+                    binFileUrl=it
+                    "下载成功，路径为：${it}".logE(logFlag)
+                    scope.launch(Dispatchers.IO) {
+                        delay(10000)
+                        sendUpdate()
+                        //setUIReq()
+                    }
+                }, {
+                    //下载失败
+                    it.msg.logE(logFlag)
+                })
+            }
         }
     }
 
@@ -242,12 +267,11 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         return intent
     }
 
-
     private fun downLoad(downLoadData: (Progress) -> Unit = {}, downLoadSuccess: (String) -> Unit, downLoadError: (Throwable) -> Unit = {}) {
         scope.launch(Dispatchers.IO) {
             if (checkedAndroid_Q()) {
                 //android 10 以上
-                val factory = Android10DownloadFactory(appContext, "${System.currentTimeMillis()}.apk")
+                val factory = Android10DownloadFactory(appContext, "/stb.bin")
                 RxHttp.get(NetUrl.DOWNLOAD_URL)
                     .toFlow(factory) {
                         downLoadData.invoke(it)
@@ -259,10 +283,10 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                         downLoadSuccess.invoke(UriUtils.getFileAbsolutePath(appContext,it)?:"")
                     }
             } else {
+                binFileUrl = appContext.externalCacheDir!!.absolutePath + "/stb.bin"
                 //android 10以下
-                val localPath = appContext.externalCacheDir!!.absolutePath + "/${System.currentTimeMillis()}.apk"
                 RxHttp.get(NetUrl.DOWNLOAD_URL)
-                    .toFlow(localPath) {
+                    .toFlow(binFileUrl) {
                         downLoadData.invoke(it)
                     }.catch {
                         //异常回调
@@ -387,31 +411,26 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         SerialPortHelper.sendUIReq(beginSize)
     }
 
-    private suspend fun sendUpdate(){
-//        downLoad({
-//            //下载中
-//            "下载进度：${it.progress}%".logE(logFlag)
-//        }, {
-//            //下载完成
-//            "下载成功，路径为：${it}".logE(logFlag)
-//        }, {
-//            //下载失败
-//            it.msg.logE(logFlag)
-//        })
+    private suspend fun getVersionInfo(): VersionInfoResponse {
+        return RxHttp.get("https://www.htvision.com.cn/access/integration/versioninfo/comHub")
+            .toClass<VersionInfoResponse>()
+            .await()
+    }
 
-        val fileName = appContext.getExternalFilesDir("apk/stb.bin").toString()
+    private suspend fun sendUpdate(){
+        val fileName = binFileUrl
         val myFile = File(fileName)
         val ins: InputStream = myFile.inputStream()
         val packageByte = ins.readBytes()
         "localPath: $fileName".logE(logFlag)
 
-        val softwareVersion= ByteArray(1)
-        softwareVersion.writeInt8(0)
-        val hardwareVersion= ByteArray(1)
-        hardwareVersion.writeInt8(0)
+        val softwareHighVersion= ByteArray(1)
+        softwareHighVersion.writeInt8(stm32HighVersion)
+        val softwareLowVersion= ByteArray(1)
+        softwareLowVersion.writeInt8(stm32LowVersion)
         val fwLength= ByteArray(4)
         fwLength.writeInt32LE(packageByte.size.toLong())
-        val beginSize=softwareVersion + hardwareVersion + fwLength
+        val beginSize=softwareHighVersion + softwareLowVersion + fwLength
 
         SerialPortHelper.sendBeginUpdate(beginSize)
         delay(200)

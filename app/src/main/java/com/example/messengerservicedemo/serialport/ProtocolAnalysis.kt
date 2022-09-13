@@ -249,7 +249,7 @@ class ProtocolAnalysis {
                 val open = SerialPortHelper.portManager.open()
                 "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
                 isNeedNewInit=false
-                sendUIUpdateFile(uIPackageByte)
+                //sendUIUpdateFile(uIPackageByte)
             }else{
                 "收到C3错误".logE(logFlag)
             }

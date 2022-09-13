@@ -373,7 +373,7 @@ object SerialPortHelper {
     }
 
     private fun transSendCoding(bytes: ByteArray): ByteArray {
-        "转码前长度：${bytes.size} ：${bytes.toHexString()}".logE(logFlag)
+        //"转码前长度：${bytes.size} ：${bytes.toHexString()}".logE(logFlag)
         bytes.let {
             var i = 1
             if (it[0] == ByteUtils.FRAME_START) {

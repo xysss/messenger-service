@@ -27,7 +27,7 @@ object NetUrl {
 
     const val UPLOAD_URL = "http://t.xinhuo.com/index.php/Api/Pic/uploadPic"
 
-    const val DOWNLOAD_URL = "http://app.htvision.com.cn/app_release/CR1600II/3.0.106/CR1600-20210723-3.0.106.apk"
+    var DOWNLOAD_URL = "http://app.htvision.com.cn/app_release/CR1600II/3.0.106/CR1600-20210723-3.0.106.apk"
 
     /**
      * 公众号分类

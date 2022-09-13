@@ -47,6 +47,9 @@ val mmkv: MMKV by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
 }
 
 lateinit var uIPackageByte :ByteArray
+var binFileUrl:String =""
+var stm32HighVersion:Int=0
+var stm32LowVersion:Int=0
 
 fun isMainThread(): Boolean {
     return Looper.getMainLooper().thread.id == Thread.currentThread().id
