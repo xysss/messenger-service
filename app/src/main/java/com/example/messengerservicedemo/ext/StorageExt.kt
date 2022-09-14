@@ -29,8 +29,8 @@ const val buglyAppId="91953aa13a"
 
 var sendNum= 0
 
-var isRec0x01OK= false
-var isRec0x05OK= false
+var isRec8E01OK= false
+var isRec8E05OK= false
 var uiRecNum= 0
 var baudRate=115200
 
@@ -47,6 +47,7 @@ val mmkv: MMKV by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
 }
 
 lateinit var uIPackageByte :ByteArray
+lateinit var firmwarePackageByte :ByteArray
 var binFileUrl:String =""
 var binFileDirectory:String =""
 var stm32HighVersion:Int=0

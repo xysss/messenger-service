@@ -111,37 +111,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         weatherHashMap.put("WIND",19)
 
         ZtlManager.GetInstance().setContext(this)
-
-        scope.launch(Dispatchers.IO) {
-            val versionInfo = getVersionInfo()
-            if (versionInfo.appUrl.isNotEmpty()){
-                if (versionInfo.version.isNotEmpty()){
-                    stm32HighVersion=versionInfo.version.split(".")[0].toInt()
-                    stm32LowVersion=versionInfo.version.split(".")[1].toInt()
-                }
-                binFileDirectory = appContext.externalCacheDir!!.absolutePath
-                val fileName = binFileDirectory
-                val myFile = File(fileName)
-                deleteDirectoryFiles(myFile)
-                NetUrl.DOWNLOAD_URL= versionInfo.appUrl
-                downLoad({
-                    //下载中
-                    "下载进度：${it.progress}%".logE(logFlag)
-                }, {
-                    //下载完成
-                    binFileUrl=it
-                    "下载成功，路径为：${it}".logE(logFlag)
-                    scope.launch(Dispatchers.IO) {
-                        delay(10000)
-                        sendUpdate()
-                        //setUIReq()
-                    }
-                }, {
-                    //下载失败
-                    it.msg.logE(logFlag)
-                })
-            }
-        }
     }
 
     override fun onStart(intent: Intent?, startId: Int) {
@@ -206,6 +175,41 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         //网络监听
         NetworkStateManager.instance.mNetworkStateCallback.observe(this){
             onNetworkStateChanged(it)
+        }
+
+        scope.launch(Dispatchers.IO) {
+            val versionInfo = getVersionInfo()
+            if (versionInfo.appUrl.isNotEmpty()){
+                if (versionInfo.version.isNotEmpty()){
+                    stm32HighVersion=versionInfo.version.split(".")[0].toInt()
+                    stm32LowVersion=versionInfo.version.split(".")[1].toInt()
+                    val stm32Software=mmkv.getString(ValueKey.deviceSoftwareVersion,"")
+                    if (stm32Software!=versionInfo.version){
+                        binFileDirectory = appContext.externalCacheDir!!.absolutePath
+                        val fileName = binFileDirectory
+                        val myFile = File(fileName)
+                        deleteDirectoryFiles(myFile)
+                        NetUrl.DOWNLOAD_URL= versionInfo.appUrl
+                        downLoad({
+                            //下载中
+                            "下载进度：${it.progress}%".logE(logFlag)
+                        }, {
+                            //下载完成
+                            binFileUrl=it
+                            "下载成功，路径为：${it}".logE(logFlag)
+                            scope.launch(Dispatchers.IO) {
+                                sendFirmwareUpdate()
+                                //setUIReq()
+                            }
+                        }, {
+                            //下载失败
+                            it.msg.logE(logFlag)
+                        })
+                    }else{
+                        "$stm32Software 已经是最新版本".logE(logFlag)
+                    }
+                }
+            }
         }
         return super.onStartCommand(intent, flags, startId)
     }
@@ -422,11 +426,11 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             .await()
     }
 
-    private suspend fun sendUpdate(){
+    private suspend fun sendFirmwareUpdate(){
         val fileName = binFileUrl
         val myFile = File(fileName)
         val ins: InputStream = myFile.inputStream()
-        val packageByte = ins.readBytes()
+        firmwarePackageByte = ins.readBytes()
         "localPath: $fileName".logE(logFlag)
 
         val softwareHighVersion= ByteArray(1)
@@ -434,76 +438,10 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val softwareLowVersion= ByteArray(1)
         softwareLowVersion.writeInt8(stm32LowVersion)
         val fwLength= ByteArray(4)
-        fwLength.writeInt32LE(packageByte.size.toLong())
+        fwLength.writeInt32LE(firmwarePackageByte.size.toLong())
         val beginSize=softwareHighVersion + softwareLowVersion + fwLength
 
         SerialPortHelper.sendBeginUpdate(beginSize)
-        delay(200)
-
-        sendUpdateFile(packageByte)
-    }
-
-    private suspend fun sendUpdateFile(byteArray: ByteArray){
-        var mResultList=ByteArray(518)
-        if (byteArray.size>512){
-            var offsetIndex=0
-            val mList=ByteArray(512)
-            var j=0
-            for (i in byteArray.indices){
-                if (i!=0 && i%512==0){
-                    if (i==1024){
-                        delay(500)
-                    }else{
-                        delay(100)
-                    }
-                    val offSetByteArray= ByteArray(4)
-                    offSetByteArray.writeInt32LE((i-512).toLong())
-                    val dataLength= ByteArray(2)
-                    dataLength.writeInt16LE(512)
-                    mResultList=offSetByteArray+dataLength+mList
-                    SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
-                    //"update分包： 总长度: ${byteArray.size} 发送进度： $i  长度：: ${mResultList.toHexString()}}".logE(logFlag)
-                    j=0
-                    offsetIndex=i
-
-                    mList[j]=byteArray[i]
-                    j++
-                }else{
-                    mList[j]=byteArray[i]
-                    j++
-                }
-            }
-            if (mList.isNotEmpty()){
-                val mLastList=ByteArray(j)
-                System.arraycopy(mList,0,mLastList,0,mLastList.size)
-                val offSetByteArray= ByteArray(4)
-                offSetByteArray.writeInt32LE((offsetIndex).toLong())
-                val dataLength= ByteArray(2)
-                dataLength.writeInt16LE(mLastList.size)
-                mResultList=offSetByteArray+dataLength+mLastList
-
-                SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
-                "update last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
-            }
-        }else{
-            val offSetByteArray= ByteArray(4)
-            offSetByteArray.writeInt32LE(0.toLong())
-            val dataLength= ByteArray(2)
-            dataLength.writeInt16LE(byteArray.size)
-            mResultList=offSetByteArray+dataLength+byteArray
-
-            SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
-            "update不足512： last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
-        }
-
-        var checkSum=0L
-        for (k in byteArray.indices){
-            checkSum+=byteArray[k].toInt() and 0xff
-        }
-        "checkSum: $checkSum".logE(logFlag)
-        val checkSumByte= ByteArray(4)
-        checkSumByte.writeInt32LE(checkSum)
-        SerialPortHelper.sendEndUpdate(checkSumByte)
     }
 
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
@@ -646,104 +584,78 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val weatherIdByte = ByteArray(1)
         weatherIdByte.writeInt8(weatherHashMap[realtime.skycon]?:0)
         "天气ID: ${weatherHashMap[realtime.skycon]}".logE(logFlag)
-
         val airApiByte = ByteArray(2)
         airApiByte.writeInt16LE(realtime.airQuality.aqi.chn.toInt())
         "空气指数: ${realtime.airQuality.aqi.chn.toInt()}".logE(logFlag)
-
         val ultravioletByte = ByteArray(1)
         ultravioletByte.writeInt8(realtime.lifeIndex.ultraviolet.index)
         "实时紫外线指数: ${realtime.lifeIndex.ultraviolet.index}".logE(logFlag)
-
         val maxTempByte = ByteArray(4)
         maxTempByte.writeFloatLE(daily.temperature[0].max)
         "最高温度: ${daily.temperature[0].max}".logE(logFlag)
-
         val minTempByte = ByteArray(4)
         minTempByte.writeFloatLE(daily.temperature[0].min)
         "最低温度: ${daily.temperature[0].min}".logE(logFlag)
-
         val nowTempByte = ByteArray(4)
         nowTempByte.writeFloatLE(realtime.temperature)
         "当前温度:${realtime.temperature}".logE(logFlag)
-
         val humidityByte= ByteArray(4)
         humidityByte.writeFloatLE(realtime.humidity)
         "湿度:${realtime.humidity}".logE(logFlag)
-
         val windDirectionByte= ByteArray(4)
         windDirectionByte.writeFloatLE(realtime.wind.direction)
         "风向: ${realtime.wind.direction}".logE(logFlag)
-
         val windSpeedByte= ByteArray(4)
         windSpeedByte.writeFloatLE(realtime.wind.speed)
         "风力:${realtime.wind.speed}".logE(logFlag)
-
         val cloudrateByte= ByteArray(4)
         cloudrateByte.writeFloatLE(realtime.cloudrate)
         "云量:${realtime.cloudrate} ".logE(logFlag)
-
         val rainfallByte= ByteArray(4)
         rainfallByte.writeFloatLE(realtime.precipitation.local.intensity)
         "降雨量:${realtime.precipitation.local.intensity}".logE(logFlag)
-
         val rainProbabilityByte= ByteArray(4)
         rainProbabilityByte.writeFloatLE(daily.precipitation[0].probability)
         "降雨概率:${daily.precipitation[0].probability}".logE(logFlag)
-
         val pm25Byte= ByteArray(4)
         pm25Byte.writeFloatLE(realtime.airQuality.pm25)
         "pm25:${realtime.airQuality.pm25}".logE(logFlag)
-
         val pm10Byte= ByteArray(4)
         pm10Byte.writeFloatLE(realtime.airQuality.pm10)
         "pm10:${realtime.airQuality.pm10}".logE(logFlag)
-
         val o3Byte= ByteArray(4)
         o3Byte.writeFloatLE(realtime.airQuality.o3)
         "o3:${realtime.airQuality.o3}".logE(logFlag)
-
         val so2Byte= ByteArray(4)
         so2Byte.writeFloatLE(realtime.airQuality.so2)
         "so2:${realtime.airQuality.so2}".logE(logFlag)
-
         val no2Byte= ByteArray(4)
         no2Byte.writeFloatLE(realtime.airQuality.no2)
         "no2:${realtime.airQuality.no2}".logE(logFlag)
-
         val coByte= ByteArray(4)
         coByte.writeFloatLE(realtime.airQuality.co)
         "co:${realtime.airQuality.co}".logE(logFlag)
-
         val coldRiskByte= ByteArray(1)
         coldRiskByte.writeInt8(daily.lifeIndex.coldRisk[0].index)
         "感冒指数:${daily.lifeIndex.coldRisk[0].index}".logE(logFlag)
-
         val dressingByte= ByteArray(1)
         dressingByte.writeInt8(daily.lifeIndex.dressing[0].index)
         "穿衣指数:${daily.lifeIndex.dressing[0].index}".logE(logFlag)
-
         val carWashingByte= ByteArray(1)
         carWashingByte.writeInt8(daily.lifeIndex.carWashing[0].index)
         "洗车指数:${daily.lifeIndex.carWashing[0].index}".logE(logFlag)
-
         val sunTimeNullByte= ByteArray(1)
         sunTimeNullByte.writeInt8(0)
         val alertCodeNullByte= ByteArray(1)
         alertCodeNullByte.writeInt8(255)
-
         val sunriseByte: ByteArray = (daily.astro[0].sunrise.time).toByteArray(charset("UTF-8"))+sunTimeNullByte
-
 //        val sunriseByte= ByteArray(6)
 //        sunriseByte.writeStringLE(daily.astro[0].sunrise.time+"0")
         "日出时间:${daily.astro[0].sunrise.time}".logE(logFlag)
-
         val sunsetByte: ByteArray = (daily.astro[0].sunset.time).toByteArray(charset("UTF-8"))+sunTimeNullByte
-
 //        val sunsetByte= ByteArray(6)
 //        sunsetByte.writeStringLE(daily.astro[0].sunset.time+"0")
         "日出时间:${daily.astro[0].sunset.time}".logE(logFlag)
-
         var alertCodeByte= ByteArray(2)
         if(alert.content.isEmpty()){
             alertCodeByte=alertCodeNullByte+alertCodeNullByte
@@ -752,14 +664,12 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             alertCodeByte.writeInt16LE(alert.content[0].code.toInt())
             "预警代码:${alert.content[0].code.toInt()}".logE(logFlag)
         }
-
         val weatherByteArray = weatherIdByte+airApiByte+ultravioletByte+maxTempByte+minTempByte+
                 nowTempByte+humidityByte+windDirectionByte+windSpeedByte+cloudrateByte+rainfallByte+
                 rainProbabilityByte+pm25Byte+pm10Byte+o3Byte+so2Byte+no2Byte+coByte+coldRiskByte+dressingByte+
                 carWashingByte+sunriseByte+sunsetByte+alertCodeByte
         //发送天气数据
         SerialPortHelper.sendWeatherData(weatherByteArray)
-
     }
     override fun onBind(intent: Intent): IBinder {
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
@@ -787,18 +697,14 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                         val comHubData=msg.data?.getSerializable("ComHubData")
                         //val person : Person? = acceptBundle.getParcelable("person")
                         Log.e("来自client的",comHubData.toString())
-
 //                        val user = msg.data.get("user")
 //                        Log.e("来自客户端的",user.toString())
-
 //                        val date = msg.data.getString("data")
 //                        Log.e("来自客户端的",date.toString())
-
                         //客户端的Messenger就是放在Message的replyTo中的
                         replyToClient(clientMsg)
                     }
                     WHAT2 ->{
-
                         replyToClient(clientMsg)
                     }
                     else -> super.handleMessage(msg)

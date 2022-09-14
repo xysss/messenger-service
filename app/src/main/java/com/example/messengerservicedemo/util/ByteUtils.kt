@@ -25,6 +25,7 @@ object ByteUtils {
     const val Msg88: Byte = 0x88.toByte()
     const val Msg84: Byte = 0x84.toByte()
     const val Msg82: Byte = 0x82.toByte()
+    const val Msg81: Byte = 0x81.toByte()
     const val Msg8D: Byte = 0x8D.toByte()
     const val MsgC3: Byte = 0xC3.toByte()
     const val Msg8E: Byte = 0x8E.toByte()
@@ -34,6 +35,7 @@ object ByteUtils {
     const val Msg62: Byte = 0x62.toByte()
     const val Msg00: Byte = 0x00.toByte()
     const val MsgC0: Byte = 0xC0.toByte()
+    const val MsgC2: Byte = 0xC2.toByte()
 
     fun secondToTimes(second: Int): String {
         var h = 0

@@ -149,51 +149,44 @@ class ProtocolAnalysis {
 
     private fun analyseMessage(mBytes: ByteArray?) {
         mBytes?.let {
-            when (it[4]) {
-                //设备信息
-                ByteUtils.MsgC0 -> {
-                    scope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
+                when (it[4]) {
+                    //设备信息
+                    ByteUtils.MsgC0 -> {
                         dealMsgC0(it)
                     }
-                }
-                //传感器信息读取请求
-                ByteUtils.Msg88 -> {
-                    scope.launch(Dispatchers.IO) {
+                    //传感器信息读取请求
+                    ByteUtils.Msg88 -> {
                         //dealMsg88(it)
                     }
-                }
-                ByteUtils.Msg84 -> {
-                    scope.launch(Dispatchers.IO) {
+                    ByteUtils.Msg84 -> {
                         //dealMsg84(it)
                     }
-                }
-                ByteUtils.Msg82 -> {
-                    scope.launch(Dispatchers.IO) {
+                    ByteUtils.Msg81 -> {
+                        dealMsg81(it)
+                    }
+                    ByteUtils.MsgC2 -> {
+                        dealMsgC2(it)
+                    }
+                    ByteUtils.Msg82 -> {
                         dealMsg82(it)
                     }
-                }
-                ByteUtils.Msg8D -> {
-                    scope.launch(Dispatchers.IO) {
+                    ByteUtils.Msg8D -> {
                         dealMsg8D(it)
                     }
-                }
-                ByteUtils.MsgC3 -> {
-                    scope.launch(Dispatchers.IO) {
+                    ByteUtils.MsgC3 -> {
                         dealMsgC3(it)
                     }
-                }
-                ByteUtils.Msg8E -> {
-                    scope.launch(Dispatchers.IO) {
+                    ByteUtils.Msg8E -> {
                         dealMsg8E(it)
                     }
-                }
-                ByteUtils.Msg8F -> {
-                    scope.launch(Dispatchers.IO) {
+                    ByteUtils.Msg8F -> {
                         dealMsg8F(it)
                     }
+                    else->{}
                 }
-                else->{}
             }
+
         }
     }
 
@@ -203,11 +196,11 @@ class ProtocolAnalysis {
                 //版本号
                 mmkv.putString(
                     ValueKey.deviceHardwareVersion,
-                    it[7].toInt().toString() + ":" + it[8].toInt().toString()
+                    it[7].toInt().toString() + "." + it[8].toInt().toString()
                 )
                 mmkv.putString(
                     ValueKey.deviceSoftwareVersion,
-                    it[9].toInt().toString() + ":" + it[10].toInt().toString()
+                    it[9].toInt().toString() + "." + it[10].toInt().toString()
                 )
                 //设备序列号
                 var i = 11
@@ -249,7 +242,7 @@ class ProtocolAnalysis {
                 val open = SerialPortHelper.portManager.open()
                 "串口打开${if (open) "成功" else "失败"}".logE(logFlag)
                 isNeedNewInit=false
-                //sendUIUpdateFile(uIPackageByte)
+                sendUIUpdateFile(uIPackageByte)
             }else{
                 "收到C3错误".logE(logFlag)
             }
@@ -275,16 +268,16 @@ class ProtocolAnalysis {
         mBytes.let {
             if (it.size == 9) {
                 if (it[7].toInt()==1){
-                    isRec0x01OK=true
+                    isRec8E01OK=true
                     uiRecNum++
                     "0x01成功".logE(logFlag)
                 }else if (it[7].toInt()==5){
                     "0x05成功".logE(logFlag)
-                    isRec0x05OK=true
+                    isRec8E05OK=true
                 }
                 else{
-                    isRec0x01OK=false
-                    isRec0x05OK=false
+                    isRec8E01OK=false
+                    isRec8E05OK=false
                 }
             }
         }
@@ -296,6 +289,94 @@ class ProtocolAnalysis {
                 "发送UI映像文件结束 成功".logE(logFlag)
             }
         }
+    }
+    private suspend fun dealMsg81(mBytes: ByteArray) {
+        mBytes.let {
+            if (it.size == 10) {
+                if (it[7].toInt()==0){
+                    "开始固件更新请求,失败".logE(logFlag)
+                    sendFirmwareUpdateFile(firmwarePackageByte)
+                }
+                else if (it[7].toInt()==1){
+                    "开始固件更新请求 自动模式,成功".logE(logFlag)
+                }
+                else if (it[7].toInt()==2){
+                    "等待STM的通知信息，手动模式，是否继续更新".logE(logFlag)
+                }
+            }
+        }
+    }
+
+    private suspend fun dealMsgC2(mBytes: ByteArray) {
+        mBytes.let {
+            if (it.size == 9) {
+                "收到安卓STM确认更新固件请求".logE(logFlag)
+                sendFirmwareUpdateFile(firmwarePackageByte)
+            }
+        }
+    }
+
+    private suspend fun sendFirmwareUpdateFile(byteArray: ByteArray){
+        var mResultList=ByteArray(518)
+        if (byteArray.size>512){
+            var offsetIndex=0
+            val mList=ByteArray(512)
+            var j=0
+            for (i in byteArray.indices){
+                if (i!=0 && i%512==0){
+                    if (i==1024){
+                        delay(500)
+                    }else{
+                        delay(100)
+                    }
+                    val offSetByteArray= ByteArray(4)
+                    offSetByteArray.writeInt32LE((i-512).toLong())
+                    val dataLength= ByteArray(2)
+                    dataLength.writeInt16LE(512)
+                    mResultList=offSetByteArray+dataLength+mList
+                    SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
+                    //"update分包： 总长度: ${byteArray.size} 发送进度： $i  长度：: ${mResultList.toHexString()}}".logE(logFlag)
+                    j=0
+                    offsetIndex=i
+
+                    mList[j]=byteArray[i]
+                    j++
+                }else{
+                    mList[j]=byteArray[i]
+                    j++
+                }
+            }
+            if (mList.isNotEmpty()){
+                val mLastList=ByteArray(j)
+                System.arraycopy(mList,0,mLastList,0,mLastList.size)
+                val offSetByteArray= ByteArray(4)
+                offSetByteArray.writeInt32LE((offsetIndex).toLong())
+                val dataLength= ByteArray(2)
+                dataLength.writeInt16LE(mLastList.size)
+                mResultList=offSetByteArray+dataLength+mLastList
+
+                SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
+                "update last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
+            }
+        }else{
+            val offSetByteArray= ByteArray(4)
+            offSetByteArray.writeInt32LE(0.toLong())
+            val dataLength= ByteArray(2)
+            dataLength.writeInt16LE(byteArray.size)
+            mResultList=offSetByteArray+dataLength+byteArray
+
+            SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
+            "update不足512： last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
+        }
+
+        var checkSum=0L
+        for (k in byteArray.indices){
+            checkSum+=byteArray[k].toInt() and 0xff
+        }
+        "checkSum: $checkSum".logE(logFlag)
+        val checkSumByte= ByteArray(4)
+        checkSumByte.writeInt32LE(checkSum)
+        SerialPortHelper.sendEndUpdate(checkSumByte)
     }
 
     private suspend fun sendUIUpdateFile(byteArray: ByteArray){
@@ -316,18 +397,18 @@ class ProtocolAnalysis {
                     val dataLength= ByteArray(2)
                     dataLength.writeInt16LE(512)
                     mResultList=offSetByteArray+dataLength+mList
-                    isRec0x01OK=false
+                    isRec8E01OK=false
                     while(true){
                         SerialPortHelper.sendUIUpdate(mResultList,mResultList.size+9,mResultList.size)
                         "UI分包： 总长度: ${byteArray.size} 发送进度： $i".logE(logFlag)
                         delay(2000)
                     }
                     offsetIndex=i
-                    while (!isRec0x01OK){
+                    while (!isRec8E01OK){
                         delay(100)
                         "0x01等待中".logE(logFlag)
                     }
-                    while (uiRecNum ==8 && !isRec0x05OK){
+                    while (uiRecNum ==8 && !isRec8E05OK){
                         delay(100)
                         "0x05等待中".logE(logFlag)
                     }
