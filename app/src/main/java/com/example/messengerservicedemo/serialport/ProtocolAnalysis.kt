@@ -2,6 +2,7 @@ package com.example.messengerservicedemo.serialport
 
 import ZtlApi.ZtlManager
 import com.example.messengerservicedemo.ext.*
+import com.example.messengerservicedemo.serialport.SerialPortHelper.sendRecDDeviceInfo
 import com.example.messengerservicedemo.serialport.model.SensorData
 import com.example.messengerservicedemo.serialport.model.SensorModel
 import com.example.messengerservicedemo.util.ByteUtils
@@ -194,14 +195,8 @@ class ProtocolAnalysis {
         mBytes.let {
             if (it.size == 33) {
                 //版本号
-                mmkv.putString(
-                    ValueKey.deviceHardwareVersion,
-                    it[7].toInt().toString() + "." + it[8].toInt().toString()
-                )
-                mmkv.putString(
-                    ValueKey.deviceSoftwareVersion,
-                    it[9].toInt().toString() + "." + it[10].toInt().toString()
-                )
+                mmkv.putString(ValueKey.deviceHardwareVersion, it[7].toInt().toString() + "." + it[8].toInt().toString())
+                mmkv.putString(ValueKey.deviceSoftwareVersion, it[9].toInt().toString() + "." + it[10].toInt().toString())
                 //设备序列号
                 var i = 11
                 while (i < it.size)
@@ -209,9 +204,8 @@ class ProtocolAnalysis {
                 val tempBytes: ByteArray = it.readByteArrayBE(11, i - 11)
                 mmkv.putString(ValueKey.deviceId, String(tempBytes))
                 "设备信息响应成功: ${String(tempBytes)}".logE("xysLog")
-
+                sendRecDDeviceInfo()
                 recall.initLocation()
-
             }
         }
     }
@@ -228,7 +222,6 @@ class ProtocolAnalysis {
                 else if (it[7].toInt()==1){
                     "发送映像文件请求,失败 sendNum:$sendNum".logE(logFlag)
                 }
-                //recall.initLocation()
             }
         }
     }
@@ -295,10 +288,10 @@ class ProtocolAnalysis {
             if (it.size == 10) {
                 if (it[7].toInt()==0){
                     "开始固件更新请求,失败".logE(logFlag)
-                    sendFirmwareUpdateFile(firmwarePackageByte)
                 }
                 else if (it[7].toInt()==1){
                     "开始固件更新请求 自动模式,成功".logE(logFlag)
+                    sendFirmwareUpdateFile(firmwarePackageByte)
                 }
                 else if (it[7].toInt()==2){
                     "等待STM的通知信息，手动模式，是否继续更新".logE(logFlag)
@@ -338,7 +331,6 @@ class ProtocolAnalysis {
                     //"update分包： 总长度: ${byteArray.size} 发送进度： $i  长度：: ${mResultList.toHexString()}}".logE(logFlag)
                     j=0
                     offsetIndex=i
-
                     mList[j]=byteArray[i]
                     j++
                 }else{
@@ -354,7 +346,6 @@ class ProtocolAnalysis {
                 val dataLength= ByteArray(2)
                 dataLength.writeInt16LE(mLastList.size)
                 mResultList=offSetByteArray+dataLength+mLastList
-
                 SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
                 "update last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
             }
@@ -368,7 +359,6 @@ class ProtocolAnalysis {
             SerialPortHelper.sendUpdate(mResultList,mResultList.size+9,mResultList.size)
             "update不足512： last 总长度: ${byteArray.size} 发送长度： ${mResultList.size} : ${mResultList.toHexString()}".logE(logFlag)
         }
-
         var checkSum=0L
         for (k in byteArray.indices){
             checkSum+=byteArray[k].toInt() and 0xff
@@ -471,9 +461,7 @@ class ProtocolAnalysis {
                 for (i in 0 until sensorNum) {
                     val sensorId = it[7 + 2 + i * 37].toInt().toString()
                     val sensorType = it.readByteArrayBE(7 + 3 + i * 37, 2).readInt16LE().toString()
-                    val sensorVersion =
-                        it.readByteArrayBE(7 + 5 + i * 37, 2).readInt16LE().toString()
-
+                    val sensorVersion = it.readByteArrayBE(7 + 5 + i * 37, 2).readInt16LE().toString()
                     var k = 14
                     while (k < it.size)
                         if (it[k] == ByteUtils.FRAME_00) break else k++
@@ -488,16 +476,10 @@ class ProtocolAnalysis {
                         4 -> "PPB"
                         else -> ""
                     }
-
                     val sensorReserv = it[7 + 28 + i * 37].toInt().toString()
                     val sensorWm = it.readByteArrayBE(7 + 29 + i * 37, 2).readInt16LE().toString()
-
-                    val sensorFullScale =
-                        it.readByteArrayBE(7 + 31 + i * 37, 4).readInt32LE().toString()
-
-                    val sensorSensibility =
-                        it.readByteArrayBE(7 + 35 + i * 37, 4).readFloatLE().toInt().toString()
-
+                    val sensorFullScale = it.readByteArrayBE(7 + 31 + i * 37, 4).readInt32LE().toString()
+                    val sensorSensibility = it.readByteArrayBE(7 + 35 + i * 37, 4).readFloatLE().toInt().toString()
                     val sensorModel = SensorModel(
                         sensorId,
                         sensorType,
@@ -512,7 +494,6 @@ class ProtocolAnalysis {
                     sensorModel.toString().logE(logFlag)
                     sensorArray.add(sensorModel)
                 }
-
             }
         }
     }
@@ -535,7 +516,6 @@ class ProtocolAnalysis {
                     senHumidityState = it[24].toInt().toString()  //0-无故障，1-故障
                     senHumidityValue = it[25].toInt().toString()  //湿度，无符号单字节整数，单位：%
                 }
-
                 val sensorData = SensorData(
                     senId,
                     senState,
@@ -548,7 +528,6 @@ class ProtocolAnalysis {
                     senHumidityValue
                 )
                 sensorData.toString().logE(logFlag)
-
             }
         }
     }

@@ -45,6 +45,16 @@ object SerialCommandProtocol : BaseProtocol() {
         0x00.toByte()
     )
 
+    private var getRecdDeviceInfoByte = byteArrayOf(
+        0x55.toByte(),
+        0x00.toByte(),
+        0x09.toByte(),
+        0x00.toByte(),
+        0xC0.toByte(),
+        0x00.toByte(),
+        0x00.toByte()
+    )
+
     private var getNetStateInfoByte = byteArrayOf(
         0x55.toByte(),
         0x00.toByte(),
@@ -181,6 +191,13 @@ object SerialCommandProtocol : BaseProtocol() {
         return this.getSensorInfoByte + Crc8.cal_crc8_t(
             this.getSensorInfoByte,
             this.getSensorInfoByte.size
+        ) + ByteUtils.FRAME_END
+    }
+
+    fun getRecDDeviceInfoReq(): ByteArray {
+        return this.getRecdDeviceInfoByte + Crc8.cal_crc8_t(
+            this.getRecdDeviceInfoByte,
+            this.getRecdDeviceInfoByte.size
         ) + ByteUtils.FRAME_END
     }
 

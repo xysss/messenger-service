@@ -95,6 +95,24 @@ object SerialPortHelper {
         printLog(isSuccess, sends)
     }
 
+    fun sendRecDDeviceInfo() {
+        val sends: ByteArray =transSendCoding(SerialCommandProtocol.getRecDDeviceInfoReq())
+        val isSuccess: Boolean = serialPortManager.send(
+            WrapSendData(sends, 3000, 300, 1),
+            object : OnDataReceiverListener {
+                override fun onSuccess(data: WrapReceiverData) {
+                    val buffer: ByteArray = data.data
+                }
+                override fun onFailed(wrapSendData: WrapSendData, msg: String) {
+                    "onFailed: $msg".logE(logFlag)
+                }
+                override fun onTimeOut() {
+                    "onTimeOut: 发送数据或者接收数据超时".logE(logFlag)
+                }
+            })
+        printLog(isSuccess, sends)
+    }
+
     fun sendNetState(bytes: ByteArray) {
         val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendNetStateReq(bytes))
         "发送网络状态!Service：${sends.toHexString()}".logE(logFlag)
@@ -174,7 +192,6 @@ object SerialPortHelper {
     fun sendUIUpdate(bytes: ByteArray,allLength: Int,dataLength: Int) {
 //        val byte= ByteArray(100)
 //        System.arraycopy(bytes,0,byte,0,100)
-
         val allLengthByte= ByteArray(2)
         allLengthByte.writeInt16LE(allLength)
         val dataLengthByte= ByteArray(2)

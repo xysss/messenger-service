@@ -356,15 +356,12 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
      */
     private fun onNetworkStateChanged(netState: NetState) {
         val netStateByte = ByteArray(1)
-
         if (netState.isSuccess) {
             mmkv.putBoolean(ValueKey.isNetworking,true)
             "终于有网了!Service".logE(logFlag)
-
             //获取定位
             initLocationOption()
             netStateByte.writeInt8(1)
-
             val calendar = Calendar.getInstance()
             val year = calendar[1]
             val monthOfYear = calendar[2] + 1
@@ -387,7 +384,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             secondByte.writeInt8(second)
             val timeByteArray = yearByte+monthOfYearByte+dayOfMonthByte+hourByte+minuteByte+secondByte
             SerialPortHelper.sendTime(timeByteArray)
-
         } else {
             mmkv.putBoolean(ValueKey.isNetworking,false)
             "网络无连接!Service".logE(logFlag)
@@ -395,7 +391,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         }
         //发送网络状态
         SerialPortHelper.sendNetState(netStateByte)
-
 //        val deviceSensorState = ByteArray(1)
 //        deviceSensorState.writeInt8(0)  //0 关闭  1 启动
 //        //停止主动上报
@@ -408,7 +403,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val ins: InputStream = myFile.inputStream()
         uIPackageByte = ins.readBytes()
         "localPath: $fileName".logE(logFlag)
-
         val softwareVersion= ByteArray(1)
         softwareVersion.writeInt8(0)
         val hardwareVersion= ByteArray(1)
@@ -416,7 +410,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val fwLength= ByteArray(4)
         fwLength.writeInt32LE(uIPackageByte.size.toLong())
         val beginSize=softwareVersion + hardwareVersion + fwLength
-
         SerialPortHelper.sendUIReq(beginSize)
     }
 
@@ -432,7 +425,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val ins: InputStream = myFile.inputStream()
         firmwarePackageByte = ins.readBytes()
         "localPath: $fileName".logE(logFlag)
-
         val softwareHighVersion= ByteArray(1)
         softwareHighVersion.writeInt8(stm32HighVersion)
         val softwareLowVersion= ByteArray(1)
@@ -440,7 +432,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val fwLength= ByteArray(4)
         fwLength.writeInt32LE(firmwarePackageByte.size.toLong())
         val beginSize=softwareHighVersion + softwareLowVersion + fwLength
-
         SerialPortHelper.sendBeginUpdate(beginSize)
     }
 
@@ -468,7 +459,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         "串口关闭${if (close) "成功" else "失败"}".logE(logFlag)
         // 销毁定位
         amapLocationUtil?.let { it.destroyLocation() }
-
         //销毁重启service
 //        val intent = Intent(this,MessengerService::class.java)
 //        startService(intent)
@@ -497,7 +487,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                     val location = Location(longitude.toString(),latitude.toString())
                     val place= Place(address?:"",location,address?:"")
                     "${place.address}: ${place.location.lat}: ${place.location.lat}".logE(logFlag)
-
                     if (isSucdess) {
                         "定位成功".logE(logFlag)
                         refreshWeather(location.lng,location.lat,place.address)
@@ -542,7 +531,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val daily = weather.daily
         val alert = weather.alert
         // 填充now.xml布局中数据
-
         "天气：${realtime.skycon}".logE(logFlag)
         //温度
         val currentTempText = "${realtime.temperature.toInt()} ℃".logE(logFlag)
@@ -559,7 +547,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val skyconText="${realtime.skycon}".logE(logFlag)
 //        val sky1 = getSky(skyconText)
 //        mViewBinding.image1One.setImageResource(sky1.icon)
-
         //mViewBinding.nowInclude.currentSky.text = getSky(realtime.skycon).info
         val currentPM25Text = "空气指数 ${realtime.airQuality.aqi.chn.toInt()}".logE(logFlag)
         //mViewBinding.nowInclude.currentAQI.text = currentPM25Text
@@ -729,7 +716,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     }
 
     override fun onDataReceive(sensorData: SensorData) {
-
     }
 
     override fun initLocation() {
