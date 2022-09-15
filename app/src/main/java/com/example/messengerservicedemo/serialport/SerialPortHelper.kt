@@ -153,7 +153,7 @@ object SerialPortHelper {
 
     fun sendBeginUpdate(bytes: ByteArray) {
         val sends: ByteArray = transSendCoding(SerialCommandProtocol.sendBeginUpdateReq(bytes))
-        "开始固件更新请求 Service：${sends.toHexString()}".logE(logFlag)
+        "开始固件更新请求：${sends.toHexString()}".logE(logFlag)
         val isSuccess: Boolean = serialPortManager.send(
             WrapSendData(sends, 3000, 300, 1),
             object : OnDataReceiverListener {

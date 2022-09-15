@@ -244,14 +244,14 @@ class ProtocolAnalysis {
 
     private suspend fun dealMsg8D(mBytes: ByteArray) {
         mBytes.let {
-            if (it.size == 9) {
+            if (it.size == 10) {
                 if (it[7].toInt()==0){
-                    "设置STM的UI更新请求 响应成功".logE(logFlag)
+                    "开始UI更新请求 响应成功".logE(logFlag)
                 }
                 else if (it[7].toInt()==1){
-                    "设置STM的UI更新请求 响应失败".logE(logFlag)
+                    "开始UI更新请求 响应失败".logE(logFlag)
                 }else if (it[7].toInt()==2){
-                    "设置STM的UI更新请求 响应等通知".logE(logFlag)
+                    "开始UI更新请求 响应等通知".logE(logFlag)
                 }
             }
         }
