@@ -176,41 +176,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         NetworkStateManager.instance.mNetworkStateCallback.observe(this){
             onNetworkStateChanged(it)
         }
-
-        scope.launch(Dispatchers.IO) {
-            val versionInfo = getVersionInfo()
-            if (versionInfo.appUrl.isNotEmpty()){
-                if (versionInfo.version.isNotEmpty()){
-                    stm32HighVersion=versionInfo.version.split(".")[0].toInt()
-                    stm32LowVersion=versionInfo.version.split(".")[1].toInt()
-                    val stm32Software=mmkv.getString(ValueKey.deviceSoftwareVersion,"")
-                    if (stm32Software!=versionInfo.version){
-                        binFileDirectory = appContext.externalCacheDir!!.absolutePath
-                        val fileName = binFileDirectory
-                        val myFile = File(fileName)
-                        deleteDirectoryFiles(myFile)
-                        NetUrl.DOWNLOAD_URL= versionInfo.appUrl
-                        downLoad({
-                            //下载中
-                            "下载进度：${it.progress}%".logE(logFlag)
-                        }, {
-                            //下载完成
-                            binFileUrl=it
-                            "下载成功，路径为：${it}".logE(logFlag)
-                            scope.launch(Dispatchers.IO) {
-                                sendFirmwareUpdate()
-                                //setUIReq()
-                            }
-                        }, {
-                            //下载失败
-                            it.msg.logE(logFlag)
-                        })
-                    }else{
-                        "$stm32Software 已经是最新版本".logE(logFlag)
-                    }
-                }
-            }
-        }
         return super.onStartCommand(intent, flags, startId)
     }
 
@@ -280,7 +245,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         scope.launch(Dispatchers.IO) {
             if (checkedAndroid_Q()) {
                 //android 10 以上
-                val factory = Android10DownloadFactory(appContext, "/stb.bin")
+                val factory = Android10DownloadFactory(appContext, "${System.currentTimeMillis()}_stb.bin.apk")
                 RxHttp.get(NetUrl.DOWNLOAD_URL)
                     .toFlow(factory) {
                         downLoadData.invoke(it)
@@ -292,7 +257,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                         downLoadSuccess.invoke(UriUtils.getFileAbsolutePath(appContext,it)?:"")
                     }
             } else {
-                binFileUrl = appContext.externalCacheDir!!.absolutePath + "/stb.bin"
+                val binFileUrl = appContext.externalCacheDir!!.absolutePath + "/${System.currentTimeMillis()}_stb.bin"
+                mmkv.putString(ValueKey.binFileUrl,binFileUrl)
                 //android 10以下
                 RxHttp.get(NetUrl.DOWNLOAD_URL)
                     .toFlow(binFileUrl) {
@@ -398,6 +364,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     }
 
     private suspend fun setUIReq(){
+        //val factory = Android10DownloadFactory(appContext, "apk/jidinghe.tft")
         val fileName = appContext.getExternalFilesDir("apk/jidinghe.tft").toString()
         val myFile = File(fileName)
         val ins: InputStream = myFile.inputStream()
@@ -420,7 +387,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     }
 
     private suspend fun sendFirmwareUpdate(){
-        val fileName = binFileUrl
+        val fileName = mmkv.getString(ValueKey.binFileUrl,"")
         val myFile = File(fileName)
         val ins: InputStream = myFile.inputStream()
         firmwarePackageByte = ins.readBytes()
@@ -718,7 +685,42 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     override fun onDataReceive(sensorData: SensorData) {
     }
 
-    override fun initLocation() {
+    override suspend fun initLocation() {
+        scope.launch(Dispatchers.IO) {
+            val versionInfo = getVersionInfo()
+            if (versionInfo.appUrl.isNotEmpty()){
+                if (versionInfo.version.isNotEmpty()){
+                    stm32HighVersion=versionInfo.version.split(".")[0].toInt()
+                    stm32LowVersion=versionInfo.version.split(".")[1].toInt()
+                    val stm32Software=mmkv.getString(ValueKey.deviceSoftwareVersion,"")
+                    if (stm32Software!=versionInfo.version){
+                        binFileDirectory = appContext.externalCacheDir!!.absolutePath
+                        val fileName = binFileDirectory
+                        val myFile = File(fileName)
+                        deleteDirectoryFiles(myFile)
+                        NetUrl.DOWNLOAD_URL= versionInfo.appUrl
+                        downLoad({
+                            //下载中
+                            "下载进度：${it.progress}%".logE(logFlag)
+                        }, {
+                            //下载完成
+                            mmkv.putString(ValueKey.binFileUrl,it)
+                            "下载成功，路径为：${it}".logE(logFlag)
+                            scope.launch(Dispatchers.IO) {
+                                sendFirmwareUpdate()
+                                //setUIReq()
+                            }
+                        }, {
+                            //下载失败
+                            it.msg.logE(logFlag)
+                        })
+                    }else{
+                        "$stm32Software 已经是最新版本".logE(logFlag)
+                    }
+                }
+            }
+        }
+
         if (mmkv.getBoolean(ValueKey.isNetworking,false)){
             initLocationOption()
         }

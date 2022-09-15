@@ -191,7 +191,7 @@ class ProtocolAnalysis {
         }
     }
 
-    private fun dealMsgC0(mBytes: ByteArray) {
+    private suspend fun dealMsgC0(mBytes: ByteArray) {
         mBytes.let {
             if (it.size == 33) {
                 //版本号
@@ -534,6 +534,6 @@ class ProtocolAnalysis {
 
     interface ReceiveDataCallBack {
         fun onDataReceive(sensorData: SensorData)
-        fun initLocation()
+        suspend fun initLocation()
     }
 }

@@ -15,4 +15,7 @@ object ValueKey {
     const val deviceId = "deviceId"
     const val isFirstInitSuccess = "isFirstInitSuccess"
     const val isNetworking = "isNetworking"
+
+    //stm32固件下载路径
+    const val binFileUrl = "binFileUrl"
 }
