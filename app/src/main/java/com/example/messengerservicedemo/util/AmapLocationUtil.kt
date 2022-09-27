@@ -6,6 +6,8 @@ import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
 import com.amap.api.location.AMapLocationListener
 import com.blankj.utilcode.util.NetworkUtils
+import com.example.messengerservicedemo.ext.logFlag
+import me.hgj.mvvmhelper.ext.logE
 
 /**
  * 作者 : xys
@@ -89,11 +91,11 @@ class AmapLocationUtil(private val mContext: Context) {
                 //stopLocation()
             } else {
                 //定位失败
-//                    sb.append("定位失败" + "\n");
-//                    sb.append("错误码:" + location.getErrorCode() + "\n");
-//                    sb.append("错误信息:" + location.getErrorInfo() + "\n");
-//                    sb.append("错误描述:" + location.getLocationDetail() + "\n");
-//                    Log.e("---> 定位失败", sb.toString());
+                    sb.append("定位失败" + "\n");
+                    sb.append("错误码:" + location.getErrorCode() + "\n");
+                    sb.append("错误信息:" + location.getErrorInfo() + "\n");
+                    sb.append("错误描述:" + location.getLocationDetail() + "\n");
+                    "---> 定位失败 ${sb.toString()}".logE(logFlag)
                 LocationFarile(false, location)
             }
         }
