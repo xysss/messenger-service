@@ -86,8 +86,6 @@ class InitComm : Task(TASK_ID, true) {
         // 设置是否为上报进程
         /*val strategy = CrashReport.UserStrategy(appContext)
         strategy.isUploadProcess = processName == null || processName == packageName*/
-        // 初始化Bugly
-        Bugly.init(appContext,"f874442b1e", BuildConfig.DEBUG)
 
         //防止项目崩溃，崩溃后打开错误界面
         CaocConfig.Builder.create()

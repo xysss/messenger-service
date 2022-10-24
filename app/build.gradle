@@ -174,7 +174,4 @@ dependencies {
     //debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.4'
     //调试数据库
     //debugImplementation 'com.guolindev.glance:glance:1.1.0'
-    //Bugly
-    implementation 'com.tencent.bugly:crashreport_upgrade:latest.release'
-    implementation 'com.tencent.bugly:nativecrashreport:latest.release'
 }

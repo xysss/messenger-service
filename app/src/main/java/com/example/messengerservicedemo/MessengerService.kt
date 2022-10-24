@@ -37,6 +37,7 @@ import com.serial.port.kit.core.common.TypeConversion
 import com.serial.port.manage.data.WrapReceiverData
 import com.serial.port.manage.listener.OnDataPickListener
 import com.swallowsonny.convertextlibrary.*
+import com.tencent.bugly.beta.Beta
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
@@ -63,7 +64,6 @@ import kotlin.experimental.and
  * 描述 : 描述
  */
 class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, LifecycleOwner {
-
     private lateinit var clientMsg: Message
     private lateinit var mForegroundNF: ForegroundNF
     private val mHandler = MyHandler(WeakReference(this))
@@ -73,22 +73,17 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     private var age=0
     private var mLifecycleRegistry =  LifecycleRegistry(this)
     private var netWorkReceiver: NetworkStateReceive? = null
-
     companion object {
         const val WHAT1 = 1
         const val WHAT2 = 2
         const val WHAT3 = 3
     }
-
-
     override fun onCreate() {
         super.onCreate()
         mForegroundNF = ForegroundNF(this)
         mForegroundNF.startForegroundNotification()
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-
         weatherHashMap.clear()
-
         weatherHashMap.put("CLEAR_DAY",0)
         weatherHashMap.put("CLEAR_NIGHT",1)
         weatherHashMap.put("PARTLY_CLOUDY_DAY",2)
@@ -109,39 +104,28 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         weatherHashMap.put("DUST",17)
         weatherHashMap.put("SAND",18)
         weatherHashMap.put("WIND",19)
-
         ZtlManager.GetInstance().setContext(this)
     }
-
     override fun onStart(intent: Intent?, startId: Int) {
         super.onStart(intent, startId)
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
     }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (null == intent) {
             //服务被系统kill掉之后重启进来的
             return START_NOT_STICKY
         }
-
         //注册回调
         protocolAnalysis.setUiCallback(this)
-
         mForegroundNF.startForegroundNotification()
-
-        //bugly进入首页检查更新
-        //Beta.checkUpgrade(false, true)
-
         scope.launch(Dispatchers.IO) {
             //开始处理串口信息
             protocolAnalysis.startDealMessage()
         }
-
         scope.launch(Dispatchers.IO) {
             //开始轮训gpio值
             protocolAnalysis.reqGpio()
         }
-
         // 打开串口
         if (!SerialPortHelper.portManager.isOpenDevice) {
             val open = SerialPortHelper.portManager.open()
@@ -153,17 +137,14 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         }else{
             "串口已经打开".logE(logFlag)
         }
-
         // 增加统一监听回调
         SerialPortHelper.portManager.addDataPickListener(onDataPickListener)
-
         //动态注册网络状态监听广播
         netWorkReceiver = NetworkStateReceive()
         application.registerReceiver(
             netWorkReceiver,
             IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
         )
-
         val filter = IntentFilter()
         filter.apply {
             addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
@@ -171,7 +152,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             addAction(ConnectivityManager.CONNECTIVITY_ACTION)
         }
         registerReceiver(netWorkReceiver, filter)
-
         //网络监听
         NetworkStateManager.instance.mNetworkStateCallback.observe(this){
             onNetworkStateChanged(it)
@@ -273,7 +253,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             }
         }
     }
-
     fun upload(filePath: String, uploadData: (Progress) -> Unit = {}, uploadSuccess: (String) -> Unit, uploadError: (Throwable) -> Unit = {}) {
         scope.launch(Dispatchers.IO) {
             if (checkedAndroid_Q() && filePath.startsWith("content:")) {
@@ -316,7 +295,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     private fun checkedAndroid_Q(): Boolean {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
     }
-
     /**
      * 示例，在Activity/Fragment中如果想监听网络变化，可重写onNetworkStateChanged该方法
      */
@@ -325,6 +303,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         if (netState.isSuccess) {
             mmkv.putBoolean(ValueKey.isNetworking,true)
             "终于有网了!Service".logE(logFlag)
+            //bugly进入首页检查更新
+            Beta.checkUpgrade(false, true)
             //获取定位
             initLocationOption()
             netStateByte.writeInt8(1)
@@ -362,7 +342,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 //        //停止主动上报
 //        SerialPortHelper.setDeviceSensorState(deviceSensorState)
     }
-
     private suspend fun setUIReq(){
         //val factory = Android10DownloadFactory(appContext, "apk/jidinghe.tft")
         val fileName = appContext.getExternalFilesDir("apk/jidinghe.tft").toString()
@@ -379,13 +358,11 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val beginSize=softwareVersion + hardwareVersion + fwLength
         SerialPortHelper.sendUIReq(beginSize)
     }
-
     private suspend fun getVersionInfo(): VersionInfoResponse {
         return RxHttp.get("https://www.htvision.com.cn/access/integration/versioninfo/comHub")
             .toClass<VersionInfoResponse>()
             .await()
     }
-
     private suspend fun sendFirmwareUpdate(){
         val fileName = mmkv.getString(ValueKey.binFileUrl,"")
         val myFile = File(fileName)
@@ -401,7 +378,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         val beginSize=softwareHighVersion + softwareLowVersion + fwLength
         SerialPortHelper.sendBeginUpdate(beginSize)
     }
-
     private val onDataPickListener: OnDataPickListener = object : OnDataPickListener {
         override fun onSuccess(data: WrapReceiverData) {
             "统一响应数据：长度： ${data.data.size} :${TypeConversion.bytes2HexString(data.data)}".logE("串口")
@@ -411,7 +387,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             }
         }
     }
-
     override fun onDestroy() {
         super.onDestroy()
         application.unregisterReceiver(netWorkReceiver)
@@ -430,7 +405,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
 //        val intent = Intent(this,MessengerService::class.java)
 //        startService(intent)
     }
-
     private fun initLocationOption() {
         if (null == amapLocationUtil) {
             amapLocationUtil = AmapLocationUtil(appContext)
@@ -467,7 +441,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             })
         }
     }
-
     fun refreshWeather(lng: String, lat: String, placeName: String){
         scope.launch(Dispatchers.IO){
             val deferredRealtime = async {
@@ -492,7 +465,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             }
         }
     }
-
     private suspend fun showWeatherInfo(weather: Weather) {
         val realtime = weather.realtime
         val daily = weather.daily
@@ -633,12 +605,10 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         //将Messenger中的binder返回给客户端,让它可以远程调用
         return mMessenger.binder
     }
-
     override fun onUnbind(intent: Intent?): Boolean {
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         return super.onUnbind(intent)
     }
-
     private class MyHandler(val wrActivity: WeakReference<MessengerService>) : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             super.handleMessage(msg)
@@ -666,7 +636,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             }
         }
     }
-
     private fun replyToClient(msg: Message) {
         val clientMessenger = msg.replyTo
         val replyMessage = Message.obtain(null, WHAT1)
@@ -681,10 +650,8 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             e.printStackTrace()
         }
     }
-
     override fun onDataReceive(sensorData: SensorData) {
     }
-
     override suspend fun initLocation() {
 //        scope.launch(Dispatchers.IO) {
 //            val versionInfo = getVersionInfo()
@@ -725,7 +692,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             initLocationOption()
         }
     }
-
     override fun getLifecycle(): Lifecycle {
         return mLifecycleRegistry
     }
