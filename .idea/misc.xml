@@ -4,6 +4,10 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.1296875" />
+        <entry key="app/src/main/res/layout/message_dialog.xml" value="0.2713541666666667" />
+        <entry key="app/src/main/res/layout/transparent_selector.xml" value="0.19010416666666666" />
+        <entry key="app/src/main/res/layout/ui_dialog.xml" value="0.2713541666666667" />
+        <entry key="app/src/main/res/layout/update_dialog.xml" value="0.19010416666666666" />
       </map>
     </option>
   </component>

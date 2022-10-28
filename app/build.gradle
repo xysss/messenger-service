@@ -4,7 +4,9 @@ plugins {
     id 'kotlin-parcelize'
     id 'kotlin-kapt'
 }
-
+static def releaseTime() {
+    return new Date().format("yyyyMMdd-HH")
+}
 android {
     signingConfigs {
         app {
@@ -26,10 +28,16 @@ android {
         targetSdk 31
         versionCode 4
         versionName "1.0.4"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ndk {
-            abiFilters "armeabi-v7a","x86","armeabi","arm64-v8a"
+            abiFilters "armeabi-v7a","arm64-v8a"
         }
+    }
+    android.applicationVariants.all {
+        variant ->
+            variant.outputs.all {
+                //在这里修改apk文件名
+                outputFileName = "ComHub-v${variant.versionName}-t${releaseTime()}-${name}.apk"
+            }
     }
     buildFeatures {
         viewBinding true
@@ -44,11 +52,18 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'  //混淆时使用的规则文件
         }
         debug {
+            // 给包名添加后缀
+            applicationIdSuffix '.debug'
+            // 调试模式开关
+            debuggable true
             minifyEnabled false
+            // 压缩对齐开关
             zipAlignEnabled true
+            // 移除无用的资源
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+        preview.initWith(debug)
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -63,7 +78,7 @@ dependencies {
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'androidx.core:core-ktx:1.6.0'
+    implementation 'androidx.core:core-ktx:1.8.0'
     //test
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
@@ -101,8 +116,6 @@ dependencies {
     //Bugly
     implementation 'com.tencent.bugly:crashreport_upgrade:latest.release'
     implementation 'com.tencent.bugly:nativecrashreport:latest.release'
-    //glide
-    implementation 'com.github.bumptech.glide:glide:4.12.0'
     //今日头条屏幕适配方案优化
     implementation 'me.jessyan:autosize:1.2.1'
     //防崩溃
@@ -174,4 +187,68 @@ dependencies {
     //debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.4'
     //调试数据库
     //debugImplementation 'com.guolindev.glance:glance:1.1.0'
+
+    // 基类封装
+    implementation project(':library:base')
+    // 控件封装
+    implementation project(':library:widget')
+    // 友盟封装
+    implementation project(':library:umeng')
+    // AOP 插件库：https://mvnrepository.com/artifact/org.aspectj/aspectjrt
+    implementation 'org.aspectj:aspectjrt:1.9.6'
+
+    // 标题栏框架：https://github.com/getActivity/TitleBar
+    implementation 'com.github.getActivity:TitleBar:9.2'
+    // 吐司框架：https://github.com/getActivity/ToastUtils
+    implementation 'com.github.getActivity:ToastUtils:9.5'
+    // 网络请求框架：https://github.com/getActivity/EasyHttp
+    implementation 'com.github.getActivity:EasyHttp:10.2'
+    // OkHttp 框架：https://github.com/square/okhttp
+    // noinspection GradleDependency
+    implementation 'com.squareup.okhttp3:okhttp:3.12.13'
+    // Json 解析框架：https://github.com/google/gson
+    implementation 'com.google.code.gson:gson:2.8.8'
+    // Gson 解析容错：https://github.com/getActivity/GsonFactory
+    implementation 'com.github.getActivity:GsonFactory:5.2'
+    // Shape 框架：https://github.com/getActivity/ShapeView
+    implementation 'com.github.getActivity:ShapeView:6.0'
+
+    // AOP 插件库：https://mvnrepository.com/artifact/org.aspectj/aspectjrt
+    implementation 'org.aspectj:aspectjrt:1.9.6'
+
+    // 图片加载框架：https://github.com/bumptech/glide
+    // 官方使用文档：https://github.com/Muyangmin/glide-docs-cn
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
+    kapt 'com.github.bumptech.glide:compiler:4.12.0'
+    // 沉浸式框架：https://github.com/gyf-dev/ImmersionBar
+    implementation 'com.gyf.immersionbar:immersionbar:3.0.0'
+
+    // 手势 ImageView：https://github.com/Baseflow/PhotoView
+    implementation 'com.github.Baseflow:PhotoView:2.3.0'
+    // 动画解析库：https://github.com/airbnb/lottie-android
+    // 动画资源：https://lottiefiles.com、https://icons8.com/animated-icons
+    implementation 'com.airbnb.android:lottie:4.1.0'
+    // 上拉刷新下拉加载框架：https://github.com/scwang90/SmartRefreshLayout
+    implementation 'com.scwang.smart:refresh-layout-kernel:2.0.3'
+    implementation 'com.scwang.smart:refresh-header-material:2.0.3'
+    // 日志打印框架：https://github.com/JakeWharton/timber
+    implementation 'com.jakewharton.timber:timber:4.7.1'
+    // 指示器框架：https://github.com/ongakuer/CircleIndicator
+    implementation 'me.relex:circleindicator:2.1.6'
+    // 权限请求框架：https://github.com/getActivity/XXPermissions
+    implementation 'com.github.getActivity:XXPermissions:12.3'
+
+    // 多语种：https://github.com/getActivity/MultiLanguages
+    // 悬浮窗：https://github.com/getActivity/XToast
+    // 日志输出：https://github.com/getActivity/Logcat
+    // 工具类：https://github.com/Blankj/AndroidUtilCode
+    // 轮播图：https://github.com/bingoogolapple/BGABanner-Android
+    // 二维码：https://github.com/bingoogolapple/BGAQRCode-Android
+    // 跑马灯：https://github.com/sunfusheng/MarqueeView
+    // 对象注解：https://www.jianshu.com/p/f1f888e4a35f
+    // 对象存储：https://github.com/leavesC/DoKV
+    // 多渠道打包：https://github.com/Meituan-Dianping/walle
+    // 设备唯一标识：http://msa-alliance.cn/col.jsp?id=120
+    // 嵌套滚动容器：https://github.com/donkingliang/ConsecutiveScroller
+    // 隐私调用监控：https://github.com/huage2580/PermissionMonitor
 }
