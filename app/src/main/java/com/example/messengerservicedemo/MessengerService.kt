@@ -15,15 +15,15 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import com.amap.api.location.AMapLocation
 import com.example.messengerservicedemo.api.NetUrl
+import com.example.messengerservicedemo.demo.dialog.UpdateDialog
+import com.example.messengerservicedemo.demo.other.AppConfig
+import com.example.messengerservicedemo.demo.other.AppConfig.getVersionCode
 import com.example.messengerservicedemo.ext.*
 import com.example.messengerservicedemo.network.SunnyWeatherNetwork
 import com.example.messengerservicedemo.network.manager.NetState
 import com.example.messengerservicedemo.network.manager.NetworkStateManager
 import com.example.messengerservicedemo.network.manager.NetworkStateReceive
-import com.example.messengerservicedemo.response.Location
-import com.example.messengerservicedemo.response.Place
-import com.example.messengerservicedemo.response.VersionInfoResponse
-import com.example.messengerservicedemo.response.Weather
+import com.example.messengerservicedemo.response.*
 import com.example.messengerservicedemo.serialport.ProtocolAnalysis
 import com.example.messengerservicedemo.serialport.SerialPortHelper
 import com.example.messengerservicedemo.serialport.model.SensorData
@@ -40,22 +40,18 @@ import com.swallowsonny.convertextlibrary.*
 import com.tencent.bugly.beta.Beta
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
 import me.hgj.mvvmhelper.base.appContext
 import me.hgj.mvvmhelper.ext.logE
 import me.hgj.mvvmhelper.ext.msg
 import rxhttp.toClass
 import rxhttp.toFlow
-import rxhttp.tryAwait
 import rxhttp.wrapper.entity.Progress
 import rxhttp.wrapper.param.RxHttp
 import java.io.File
 import java.io.InputStream
 import java.lang.ref.WeakReference
-import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.experimental.and
 
 
 /**
@@ -306,7 +302,27 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             //bugly进入首页检查更新
             Beta.checkUpgrade(false, true)
 
-
+            scope.launch(Dispatchers.IO) {
+                val appVersionInfo = getAppVersionInfo()
+                if (appVersionInfo.appUrl.isNotEmpty()){
+                    appVersionInfo.toString().logE(logFlag)
+                    if (appVersionInfo.version.toInt()>getVersionCode()){
+                        // 升级对话框
+                        UpdateDialog.Builder(appContext)
+                            // 版本名
+                            .setVersionName("v1.0.${appVersionInfo.version.toInt()}")
+                            // 是否强制更新
+                            .setForceUpdate(false)
+                            // 更新日志
+                            .setUpdateLog("修复一些已知问题")
+                            // 下载 URL
+                            .setDownloadUrl(appVersionInfo.appUrl)
+                            // 文件 MD5
+                            //.setFileMd5("df2f045dfa854d8461d9cefe08b813c8")
+                            .show()
+                    }
+                }
+            }
 
             //获取定位
             initLocationOption()
@@ -364,6 +380,12 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     private suspend fun getVersionInfo(): VersionInfoResponse {
         return RxHttp.get("https://www.htvision.com.cn/access/integration/versioninfo/comHub")
             .toClass<VersionInfoResponse>()
+            .await()
+    }
+
+    private suspend fun getAppVersionInfo(): AppVersionResponse {
+        return RxHttp.get("https://www.htvision.com.cn/access/integration/versioninfo/comHubApp")
+            .toClass<AppVersionResponse>()
             .await()
     }
     private suspend fun sendFirmwareUpdate(){
