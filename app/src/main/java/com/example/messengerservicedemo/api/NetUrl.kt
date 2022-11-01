@@ -14,7 +14,7 @@ object NetUrl {
     const val SUCCESS_CODE = 0
 
     @DefaultDomain //设置为默认域名
-    const val DEV_URL = "https://wanandroid.com/"
+    const val DEV_URL = "https://www.htvision.com.cn/"
 
     //登录
     const val LOGIN = "user/login"

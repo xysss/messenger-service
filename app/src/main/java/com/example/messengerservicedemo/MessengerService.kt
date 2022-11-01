@@ -301,8 +301,41 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
             "终于有网了!Service".logE(logFlag)
             //bugly进入首页检查更新
             Beta.checkUpgrade(false, true)
-
+/*
             scope.launch(Dispatchers.IO) {
+                val versionInfo = getVersionInfo()
+                if (versionInfo.appUrl.isNotEmpty()){
+                    if (versionInfo.version.isNotEmpty()){
+                        stm32HighVersion=versionInfo.version.split(".")[0].toInt()
+                        stm32LowVersion=versionInfo.version.split(".")[1].toInt()
+                        val stm32Software=mmkv.getString(ValueKey.deviceSoftwareVersion,"")
+                        if (stm32Software!=versionInfo.version){
+                            binFileDirectory = appContext.externalCacheDir!!.absolutePath
+                            val fileName = binFileDirectory
+                            val myFile = File(fileName)
+                            deleteDirectoryFiles(myFile)
+                            NetUrl.DOWNLOAD_URL= versionInfo.appUrl
+                            downLoad({
+                                //下载中
+                                "下载进度：${it.progress}%".logE(logFlag)
+                            }, {
+                                //下载完成
+                                mmkv.putString(ValueKey.binFileUrl,it)
+                                "下载成功，路径为：${it}".logE(logFlag)
+                                scope.launch(Dispatchers.IO) {
+                                    sendFirmwareUpdate()
+                                    //setUIReq()
+                                }
+                            }, {
+                                //下载失败
+                                it.msg.logE(logFlag)
+                            })
+                        }else{
+                            "$stm32Software 已经是最新版本".logE(logFlag)
+                        }
+                    }
+                }
+
                 val appVersionInfo = getAppVersionInfo()
                 if (appVersionInfo.appUrl.isNotEmpty()){
                     appVersionInfo.toString().logE(logFlag)
@@ -324,6 +357,7 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
                 }
             }
 
+*/
             //获取定位
             initLocationOption()
             netStateByte.writeInt8(1)
@@ -378,13 +412,13 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
         SerialPortHelper.sendUIReq(beginSize)
     }
     private suspend fun getVersionInfo(): VersionInfoResponse {
-        return RxHttp.get("https://www.htvision.com.cn/access/integration/versioninfo/comHub")
+        return RxHttp.get("access/integration/versioninfo/comHub")
             .toClass<VersionInfoResponse>()
             .await()
     }
 
     private suspend fun getAppVersionInfo(): AppVersionResponse {
-        return RxHttp.get("https://www.htvision.com.cn/access/integration/versioninfo/comHubApp")
+        return RxHttp.get("access/integration/versioninfo/comHubApp")
             .toClass<AppVersionResponse>()
             .await()
     }
@@ -678,41 +712,6 @@ class MessengerService : Service(),ProtocolAnalysis.ReceiveDataCallBack, Lifecyc
     override fun onDataReceive(sensorData: SensorData) {
     }
     override suspend fun initLocation() {
-        scope.launch(Dispatchers.IO) {
-            val versionInfo = getVersionInfo()
-            if (versionInfo.appUrl.isNotEmpty()){
-                if (versionInfo.version.isNotEmpty()){
-                    stm32HighVersion=versionInfo.version.split(".")[0].toInt()
-                    stm32LowVersion=versionInfo.version.split(".")[1].toInt()
-                    val stm32Software=mmkv.getString(ValueKey.deviceSoftwareVersion,"")
-                    if (stm32Software!=versionInfo.version){
-                        binFileDirectory = appContext.externalCacheDir!!.absolutePath
-                        val fileName = binFileDirectory
-                        val myFile = File(fileName)
-                        deleteDirectoryFiles(myFile)
-                        NetUrl.DOWNLOAD_URL= versionInfo.appUrl
-                        downLoad({
-                            //下载中
-                            "下载进度：${it.progress}%".logE(logFlag)
-                        }, {
-                            //下载完成
-                            mmkv.putString(ValueKey.binFileUrl,it)
-                            "下载成功，路径为：${it}".logE(logFlag)
-                            scope.launch(Dispatchers.IO) {
-                                sendFirmwareUpdate()
-                                //setUIReq()
-                            }
-                        }, {
-                            //下载失败
-                            it.msg.logE(logFlag)
-                        })
-                    }else{
-                        "$stm32Software 已经是最新版本".logE(logFlag)
-                    }
-                }
-            }
-        }
-
         if (mmkv.getBoolean(ValueKey.isNetworking,false)){
             initLocationOption()
         }
